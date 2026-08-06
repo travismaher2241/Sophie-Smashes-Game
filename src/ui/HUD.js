@@ -3,6 +3,7 @@ import { SWING_STATES } from '../mechanics/SwingMeter.js';
 /**
  * 16-Bit SNES Arcade & Links LS 98 Style HUD UI Manager
  * Controls 2-View Workflow: Top-Down Strategy View <-> Side-View Swing Overlay Modal
+ * Handles 14-Club Bag Selection & Shot Modes (Full, Pitch, Chip, Flop).
  */
 export class HUD {
   constructor(game) {
@@ -16,11 +17,16 @@ export class HUD {
     this.elWindVal = document.getElementById('hud-wind-val');
     this.elWindArrow = document.getElementById('hud-wind-arrow');
 
-    // Controls
+    // Controls - 14-Club Bag
     this.elClubName = document.getElementById('hud-club-name');
     this.elClubDist = document.getElementById('hud-club-dist');
     this.btnClubPrev = document.getElementById('btn-club-prev');
     this.btnClubNext = document.getElementById('btn-club-next');
+
+    // Controls - Shot Modes (Full, Pitch, Chip, Flop)
+    this.elShotMode = document.getElementById('hud-shot-mode');
+    this.btnShotPrev = document.getElementById('btn-shot-prev');
+    this.btnShotNext = document.getElementById('btn-shot-next');
 
     this.btnAimLeft = document.getElementById('btn-aim-left');
     this.btnAimRight = document.getElementById('btn-aim-right');
@@ -47,6 +53,9 @@ export class HUD {
   setupEventListeners() {
     this.btnClubPrev.addEventListener('click', () => this.game.changeClub(-1));
     this.btnClubNext.addEventListener('click', () => this.game.changeClub(1));
+
+    if (this.btnShotPrev) this.btnShotPrev.addEventListener('click', () => this.game.changeShotType(-1));
+    if (this.btnShotNext) this.btnShotNext.addEventListener('click', () => this.game.changeShotType(1));
 
     if (this.btnAimLeft) this.btnAimLeft.addEventListener('click', () => this.game.adjustAim(-0.06));
     if (this.btnAimRight) this.btnAimRight.addEventListener('click', () => this.game.adjustAim(0.06));
@@ -102,9 +111,13 @@ export class HUD {
     }
   }
 
-  updateClubInfo(club) {
+  updateClubInfo(club, effectiveDist) {
     if (this.elClubName) this.elClubName.innerText = club.name;
-    if (this.elClubDist) this.elClubDist.innerText = `${club.maxDistance}m`;
+    if (this.elClubDist) this.elClubDist.innerText = `${effectiveDist || club.maxDistance}m`;
+  }
+
+  updateShotTypeInfo(shotType) {
+    if (this.elShotMode) this.elShotMode.innerText = shotType.name;
   }
 
   showBanner(title, subtitle, duration = 3000) {

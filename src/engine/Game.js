@@ -70,9 +70,6 @@ export class Game {
     this.swingOverlay = new SwingOverlay(this);
 
     // 3. Setup Swing Meter Callbacks
-    // Click 1: Start power gauge (Sophie remains in address pose)
-    // Click 2: Lock power (Sophie remains in address pose)
-    // Click 3: Lock accuracy -> ONLY THEN trigger swing animation!
     this.swingMeter.onStateChange = (meterState) => {
       this.audioEngine.playMenuBeep();
     };
@@ -83,12 +80,14 @@ export class Game {
       this.player.startSwingAnimation();
     };
 
-    // 4. Setup Player Impact Callback using Calibrated Metric Map Flight Formula
+    // 4. Setup Player Impact Callback using Calibrated Metric Map Flight Formula & Shot Mode
     this.player.onImpactFrame = () => {
       this.audioEngine.playImpactSnap();
       this.audioEngine.playSwingWhoosh();
 
       const club = this.clubManager.getCurrentClub();
+      const shotType = this.clubManager.getCurrentShotType();
+
       const shot = this.pendingShot || {
         powerInput: 1.0,
         isOverswing: false,
@@ -110,6 +109,7 @@ export class Game {
       this.ball.launch({
         aimAngle: this.aimAngle,
         club: club,
+        shotType: shotType,
         intentionalShape: 0,
         powerInput: shot.powerInput,
         snapError: shot.snapError,
@@ -164,6 +164,8 @@ export class Game {
         this.changeClub(-1);
       } else if (e.code === 'ArrowDown') {
         this.changeClub(1);
+      } else if (e.code === 'KeyS') {
+        this.changeShotType(1);
       } else if (e.code === 'KeyM') {
         this.toggleFullOverview();
       } else if (e.code === 'Escape') {
@@ -201,12 +203,10 @@ export class Game {
       this.isDraggingMap = false;
     };
 
-    // Mouse Listeners
     this.canvas.addEventListener('mousedown', (e) => onDragStart({ x: e.clientX, y: e.clientY }));
     window.addEventListener('mousemove', (e) => onDragMove({ x: e.clientX, y: e.clientY }));
     window.addEventListener('mouseup', onDragEnd);
 
-    // Touch Listeners (Mobile Panning)
     this.canvas.addEventListener('touchstart', (e) => {
       if (e.touches.length === 1) {
         onDragStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
@@ -221,7 +221,6 @@ export class Game {
 
     window.addEventListener('touchend', onDragEnd);
 
-    // Side View Modal Canvas click
     const swingCanvas = document.getElementById('swing-canvas');
     if (swingCanvas) {
       swingCanvas.addEventListener('mousedown', () => {
@@ -245,7 +244,9 @@ export class Game {
     this.player.resetToAddress();
     this.swingMeter.reset();
     this.swingOverlay.show();
-    this.hud.showBanner('SWING STAGE', 'CLICK 1: START BACKSWING | CLICK 2: POWER | CLICK 3: SNAP', 2200);
+    const club = this.clubManager.getCurrentClub();
+    const shotType = this.clubManager.getCurrentShotType();
+    this.hud.showBanner(`SWING STAGE: ${club.name}`, `${shotType.name} (${this.clubManager.getEffectiveDistance()}m)`, 2200);
   }
 
   closeSwingOverlay() {
@@ -260,9 +261,9 @@ export class Game {
 
     if (this.state === GAME_STATES.STRATEGY_AIM) {
       this.openSwingOverlay();
-      this.swingMeter.handleClick(); // Click 1: Start power gauge
+      this.swingMeter.handleClick();
     } else if (this.state === GAME_STATES.SWING_STAGE) {
-      this.swingMeter.handleClick(); // Click 2: Lock power, Click 3: Accuracy snap -> triggers swing!
+      this.swingMeter.handleClick();
     } else if (this.state === GAME_STATES.HOLE_COMPLETE) {
       const nextHole = (this.sceneManager.currentHoleIndex % 9) + 1;
       this.switchHole(nextHole);
@@ -293,12 +294,12 @@ export class Game {
       dirAngle: Math.floor(Math.random() * 360)
     };
 
-    // Center camera on Tee Box coordinates on load for clean mobile view
     this.camera.jumpTo(tee.x, tee.y, 0.85);
 
     const distMeters = this.sceneManager.calculateDistanceToPinInMeters(tee.x, tee.y);
     this.hud.updateHoleInfo(meta, distMeters, this.sceneManager.getScoreSummary());
-    this.hud.updateClubInfo(this.clubManager.getCurrentClub());
+    this.hud.updateClubInfo(this.clubManager.getCurrentClub(), this.clubManager.getEffectiveDistance());
+    this.hud.updateShotTypeInfo(this.clubManager.getCurrentShotType());
     this.hud.updateWind(this.wind.speed, this.wind.dirAngle);
     this.hud.showBanner(`HOLE ${meta.hole}: WARRAGUL COUNTRY CLUB`, `PAR ${meta.par} - ${meta.meters || distMeters}m`);
   }
@@ -312,7 +313,15 @@ export class Game {
   changeClub(dir) {
     if (this.state !== GAME_STATES.STRATEGY_AIM) return;
     const club = dir > 0 ? this.clubManager.nextClub() : this.clubManager.prevClub();
-    this.hud.updateClubInfo(club);
+    this.hud.updateClubInfo(club, this.clubManager.getEffectiveDistance());
+    this.audioEngine.playMenuBeep();
+  }
+
+  changeShotType(dir) {
+    if (this.state !== GAME_STATES.STRATEGY_AIM) return;
+    const shotType = dir > 0 ? this.clubManager.nextShotType() : this.clubManager.prevShotType();
+    this.hud.updateShotTypeInfo(shotType);
+    this.hud.updateClubInfo(this.clubManager.getCurrentClub(), this.clubManager.getEffectiveDistance());
     this.audioEngine.playMenuBeep();
   }
 
@@ -367,19 +376,20 @@ export class Game {
 
           if (this.ball.currentTerrain.id === 'GREEN') {
             this.clubManager.selectClubById('PUTTER');
-            this.hud.updateClubInfo(this.clubManager.getCurrentClub());
+            this.hud.updateClubInfo(this.clubManager.getCurrentClub(), this.clubManager.getEffectiveDistance());
           }
         }
       }
     } else if (this.state === GAME_STATES.STRATEGY_AIM && !this.camera.isManualPanning) {
       const club = this.clubManager.getCurrentClub();
+      const effDist = this.clubManager.getEffectiveDistance();
       const officialMeters = this.sceneManager.currentMetadata?.meters || 300;
       const tee = this.sceneManager.getTeePosition();
       const pin = this.sceneManager.getPinPosition();
       const mapTotalPixelLength = Math.hypot(pin.x - tee.x, pin.y - tee.y) || 1745;
       const pixelsPerMeter = mapTotalPixelLength / officialMeters;
 
-      const targetDist = club.maxDistance * pixelsPerMeter;
+      const targetDist = effDist * pixelsPerMeter;
       const targetX = this.ball.x + Math.cos(this.aimAngle) * targetDist;
       const targetY = this.ball.y + Math.sin(this.aimAngle) * targetDist;
       this.camera.setAimTarget(this.ball.x, this.ball.y, targetX, targetY);
@@ -401,13 +411,14 @@ export class Game {
 
     if (this.state === GAME_STATES.STRATEGY_AIM) {
       const club = this.clubManager.getCurrentClub();
+      const effDist = this.clubManager.getEffectiveDistance();
       const officialMeters = this.sceneManager.currentMetadata?.meters || 300;
       const tee = this.sceneManager.getTeePosition();
       const pin = this.sceneManager.getPinPosition();
       const mapTotalPixelLength = Math.hypot(pin.x - tee.x, pin.y - tee.y) || 1745;
       const pixelsPerMeter = mapTotalPixelLength / officialMeters;
 
-      const targetDist = club.maxDistance * pixelsPerMeter;
+      const targetDist = effDist * pixelsPerMeter;
       const targetX = this.ball.x + Math.cos(this.aimAngle) * targetDist;
       const targetY = this.ball.y + Math.sin(this.aimAngle) * targetDist;
 

@@ -2,6 +2,7 @@ import { TERRAIN_TYPES, identifyTerrainFromColor } from '../utils/TerrainTypes.j
 
 /**
  * 3D Top-Down Golf Ball Physics Engine & Final Shot Calculator
+ * Handles 14-Club Bag & Shot Modes (FULL, PITCH, CHIP, FLOP).
  * Calibrated for Warragul Country Club 724x2172 map scale (~5.68 pixels/meter)
  */
 export class BallPhysics {
@@ -24,8 +25,9 @@ export class BallPhysics {
     this.gravity = 0.35;
     this.airDrag = 0.992;
 
-    // Terrain surface memory
+    // Current Terrain surface & Shot Mode memory
     this.currentTerrain = TERRAIN_TYPES.TEE_BOX;
+    this.currentRollMult = 1.0;
 
     // Trajectory dot history for arc rendering
     this.trail = [];
@@ -47,16 +49,17 @@ export class BallPhysics {
 
   /**
    * Launch Ball with Comprehensive Final Shot Calculator Formula:
-   * Calibrated so 220m Driver shot travels 220 meters on the map.
+   * Supports 14 Golf Clubs & Shot Modes (Full, Pitch, Chip, Flop).
    */
   launch(params) {
     const {
       aimAngle = -Math.PI / 2,
       club,
-      intentionalShape = 0, // Draw (-0.08) or Fade (+0.08)
-      powerInput = 1.0,     // Partial (<100%), Controlled (=100%), Overswing (>100%)
-      snapError = 0.0,      // Early = Hook (-), Perfect = 0, Late = Slice (+)
-      overswingPenalty = 0, // Overswing dispersion penalty
+      shotType = { id: 'FULL', distMult: 1.0, loftMult: 1.0, rollMult: 1.0 },
+      intentionalShape = 0,
+      powerInput = 1.0,
+      snapError = 0.0,
+      overswingPenalty = 0,
       terrainLie = { powerFactor: 1.0, loftFactor: 1.0 },
       slope = { x: 0, y: 0 },
       wind = { speed: 0, dirAngle: 0 },
@@ -64,15 +67,19 @@ export class BallPhysics {
       mapTotalPixelLength = 1745
     } = params;
 
-    // 1. Pixels per meter scale factor (~5.68 px/m on 724x2172 map)
+    // Pixels per meter scale factor (~5.68 px/m on 724x2172 map)
     const pixelsPerMeter = (mapTotalPixelLength / (officialHoleMeters || 300));
 
-    // 2. Effective Shot Distance in Meters & Pixels
+    // Calculate Effective Shot Distance & Roll Factor
+    const distMult = shotType.distMult || 1.0;
+    const loftMult = shotType.loftMult || 1.0;
+    this.currentRollMult = (shotType.rollMult || 1.0);
+
     const effectivePower = powerInput * (terrainLie.powerFactor || 1.0);
-    const targetMeters = club.maxDistance * effectivePower;
+    const targetMeters = club.maxDistance * distMult * effectivePower;
     const targetPixels = targetMeters * pixelsPerMeter;
 
-    // 3. Calculate Final Shot Angle
+    // Calculate Final Shot Angle
     const overswingDrift = (Math.random() - 0.5) * overswingPenalty * 0.14;
     const slopeAngleOffset = (slope.x * 0.05);
     const totalAngle = aimAngle + intentionalShape + (snapError * 0.26) + overswingDrift + slopeAngleOffset;
@@ -90,11 +97,11 @@ export class BallPhysics {
       this.gravity = 0.35;
       this.airDrag = 0.992;
 
-      const effectiveLoft = club.loft * (terrainLie.loftFactor || 1.0);
+      const effectiveLoft = Math.min(68, club.loft * loftMult * (terrainLie.loftFactor || 1.0));
       const flightTime = 36 + (effectiveLoft * 0.5);
       this.vz = (flightTime / 2) * this.gravity;
 
-      // Ground flight velocity calibrated to map metric distance
+      // Ground flight velocity calibrated to metric distance
       const requiredVGround = targetPixels / (flightTime * 0.94);
 
       this.vx = Math.cos(totalAngle) * requiredVGround;
@@ -118,33 +125,27 @@ export class BallPhysics {
       return;
     }
 
-    // Record trail positions
     if (this.inAir && Math.random() < 0.35) {
       this.trail.push({ x: this.x, y: this.y, z: this.z });
       if (this.trail.length > 30) this.trail.shift();
     }
 
     if (this.inAir) {
-      // Apply Air Drag
       this.vx *= this.airDrag;
       this.vy *= this.airDrag;
 
-      // Apply Wind Drift to 2D trajectory
       const windRad = (wind.dirAngle * Math.PI) / 180;
       const windForceX = Math.cos(windRad) * wind.speed * 0.005;
       const windForceY = Math.sin(windRad) * wind.speed * 0.005;
       this.vx += windForceX;
       this.vy += windForceY;
 
-      // Apply Gravity to vertical altitude
       this.vz -= this.gravity;
 
-      // Update 3D Coordinates
       this.x += this.vx;
       this.y += this.vy;
       this.z += this.vz;
 
-      // Ground Impact Detection & Terrain Response
       if (this.z <= 0) {
         this.z = 0;
 
@@ -164,13 +165,12 @@ export class BallPhysics {
           return;
         }
 
-        // Calculate Terrain Response (Restitution Bounce)
         const bounceVz = -this.vz * this.currentTerrain.restitution;
 
         if (bounceVz > 1.2) {
           this.vz = bounceVz;
-          this.vx *= this.currentTerrain.friction;
-          this.vy *= this.currentTerrain.friction;
+          this.vx *= this.currentTerrain.friction * this.currentRollMult;
+          this.vy *= this.currentTerrain.friction * this.currentRollMult;
           if (audioEngine) audioEngine.playBounce(Math.min(0.5, bounceVz / 8));
         } else {
           this.vz = 0;
@@ -194,9 +194,10 @@ export class BallPhysics {
         return;
       }
 
-      // Apply Terrain Surface Friction
-      this.vx *= (this.currentTerrain.friction || 0.88);
-      this.vy *= (this.currentTerrain.friction || 0.88);
+      // Apply Terrain Surface Friction modified by Shot Mode Roll Multiplier
+      const rollFriction = Math.min(0.96, (this.currentTerrain.friction || 0.88) * (0.85 + this.currentRollMult * 0.15));
+      this.vx *= rollFriction;
+      this.vy *= rollFriction;
 
       this.x += this.vx;
       this.y += this.vy;

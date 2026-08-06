@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Sophie Smashes Golf 16-Bit - Warragul Country Club</title>
-  <meta name="description" content="A 16-bit Hybrid Arcade Golf Game featuring Top-Down Strategy View and Side-View Swing Overlay at Warragul Country Club.">
+  <meta name="description" content="A 16-bit Hybrid Arcade Golf Game featuring 14 Golf Clubs, Shot Modes (Full, Pitch, Chip, Flop), and Side-View Swing Overlay at Warragul Country Club.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
@@ -57,22 +57,34 @@
       </div>
     </div>
 
-    <!-- Bottom Strategy Controls Bar (Aim & Club Selection) -->
+    <!-- Bottom Strategy Controls Bar (14-Club Selection & Shot Mode Selector) -->
     <footer id="hud-footer" class="snes-hud-bottom strategy-hud-bottom">
+      
+      <!-- 14-Club Bag Selector -->
       <div class="hud-control-group club-select-box">
         <button id="btn-club-prev" class="retro-btn" title="Previous Club (Up Key)">▲</button>
         <div class="club-display">
-          <span class="hud-label">CLUB</span>
-          <span id="hud-club-name" class="hud-value text-gold">DRIVER</span>
+          <span class="hud-label">CLUB (14 BAG)</span>
+          <span id="hud-club-name" class="hud-value text-gold">DRIVER (1D)</span>
           <span id="hud-club-dist" class="hud-subvalue">220m</span>
         </div>
         <button id="btn-club-next" class="retro-btn" title="Next Club (Down Key)">▼</button>
       </div>
 
+      <!-- Shot Mode Selector (Full / Pitch / Chip / Flop) -->
+      <div class="hud-control-group shot-type-box">
+        <button id="btn-shot-prev" class="retro-btn" title="Previous Shot Mode (Key S)">◄</button>
+        <div class="shot-display">
+          <span class="hud-label">SHOT MODE</span>
+          <span id="hud-shot-mode" class="hud-value text-green">FULL SHOT</span>
+        </div>
+        <button id="btn-shot-next" class="retro-btn" title="Next Shot Mode (Key S)">►</button>
+      </div>
+
       <!-- Aim Direction Controls -->
       <div class="aim-controls">
-        <button id="btn-aim-left" class="retro-btn btn-large" title="Aim Left (Left Arrow)">◀ AIM LEFT</button>
-        <button id="btn-aim-right" class="retro-btn btn-large" title="Aim Right (Right Arrow)">AIM RIGHT ▶</button>
+        <button id="btn-aim-left" class="retro-btn btn-large" title="Aim Left (Left Arrow)">◀ AIM</button>
+        <button id="btn-aim-right" class="retro-btn btn-large" title="Aim Right (Right Arrow)">AIM ▶</button>
       </div>
 
       <!-- SWING / READY BUTTON (Triggers Side-View Swing Overlay) -->
@@ -131,7 +143,7 @@
             <div id="modal-meter-cursor" class="meter-cursor"></div>
           </div>
           <div class="meter-action-hint">
-            <span id="modal-status-text">CLICK SPACE / TAP TO START POWER GAUGE</span>
+            <span id="modal-status-text">CLICK 1: START POWER GAUGE</span>
           </div>
         </div>
       </div>

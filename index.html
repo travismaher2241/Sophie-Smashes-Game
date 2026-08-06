@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sophie Smashes Golf 16-Bit</title>
+  <meta name="description" content="A 16-bit SNES inspired retro arcade golf game featuring Sophie's powerful swing and 9 challenging course maps.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./src/style.css">
+</head>
+<body>
+  <div id="app" class="retro-container">
+    <!-- Top HUD Bar -->
+    <header id="hud-header" class="snes-hud-top">
+      <div class="hud-item hole-badge">
+        <span class="hud-label">HOLE</span>
+        <span id="hud-hole-num" class="hud-value">1</span>
+      </div>
+      <div class="hud-item par-badge">
+        <span class="hud-label">PAR</span>
+        <span id="hud-par-val" class="hud-value">4</span>
+      </div>
+      <div class="hud-item dist-badge">
+        <span class="hud-label">DISTANCE</span>
+        <span id="hud-dist-val" class="hud-value">385 YDS</span>
+      </div>
+      <div class="hud-item score-badge">
+        <span class="hud-label">SCORE</span>
+        <span id="hud-score-val" class="hud-value">EVEN</span>
+      </div>
+      <div class="hud-item wind-badge">
+        <span class="hud-label">WIND</span>
+        <div id="hud-wind-container">
+          <span id="hud-wind-arrow">↑</span>
+          <span id="hud-wind-val" class="hud-value">8 MPH</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Canvas Frame Container with CRT Overlay -->
+    <div id="game-view" class="game-viewport">
+      <canvas id="game-canvas" width="640" height="480"></canvas>
+      <div id="crt-overlay" class="crt-filter"></div>
+      
+      <!-- In-Game Arcade Overlay Alerts -->
+      <div id="game-banner" class="game-banner hidden">
+        <div id="banner-text" class="banner-title">HOLE 1: PAR 4</div>
+        <div id="banner-subtext" class="banner-subtitle">PRESS SPACE TO AIM & SWING</div>
+      </div>
+
+      <!-- Shot Result Popup -->
+      <div id="shot-popup" class="shot-popup hidden">
+        <span id="shot-result-text">PERFECT SNAP!</span>
+      </div>
+    </div>
+
+    <!-- Bottom Control & Swing Gauge HUD -->
+    <footer id="hud-footer" class="snes-hud-bottom">
+      <div class="hud-control-group club-select-box">
+        <button id="btn-club-prev" class="retro-btn" title="Previous Club (Up Key)">▲</button>
+        <div class="club-display">
+          <span class="hud-label">CLUB</span>
+          <span id="hud-club-name" class="hud-value text-gold">DRIVER</span>
+          <span id="hud-club-dist" class="hud-subvalue">240 YDS</span>
+        </div>
+        <button id="btn-club-next" class="retro-btn" title="Next Club (Down Key)">▼</button>
+      </div>
+
+      <!-- Interactive 3-Click Swing Power & Snap Meter -->
+      <div class="swing-meter-container">
+        <div class="meter-labels">
+          <span>HOOK</span>
+          <span class="text-green">SWEET SPOT</span>
+          <span>SLICE</span>
+        </div>
+        <div id="meter-bar-track" class="meter-bar-track">
+          <div id="meter-sweet-spot" class="meter-sweet-spot"></div>
+          <div id="meter-power-fill" class="meter-power-fill"></div>
+          <div id="meter-cursor" class="meter-cursor"></div>
+        </div>
+        <div class="meter-action-hint">
+          <span id="meter-status-text">CLICK SPACE: START SWING</span>
+        </div>
+      </div>
+
+      <!-- Action Buttons & Hole Selector -->
+      <div class="hud-control-group action-controls">
+        <div class="hole-selector">
+          <span class="hud-label">SELECT MAP</span>
+          <select id="select-hole" class="retro-select">
+            <option value="1">Hole 1 - Pine Valley (Par 4)</option>
+            <option value="2">Hole 2 - Dogleg Ridge (Par 4)</option>
+            <option value="3">Hole 3 - Island Green (Par 3)</option>
+            <option value="4">Hole 4 - Sand Canyon (Par 5)</option>
+            <option value="5">Hole 5 - Creek Crossing (Par 4)</option>
+            <option value="6">Hole 6 - Monster Par 5 (Par 5)</option>
+            <option value="7">Hole 7 - Cliffside Drop (Par 3)</option>
+            <option value="8">Hole 8 - Twin Bunkers (Par 4)</option>
+            <option value="9">Hole 9 - Championship Finish (Par 4)</option>
+          </select>
+        </div>
+        <div class="toggle-buttons">
+          <button id="btn-crt-toggle" class="retro-btn btn-small active" title="Toggle CRT Filter">CRT</button>
+          <button id="btn-audio-toggle" class="retro-btn btn-small active" title="Toggle Sound">SFX ON</button>
+          <button id="btn-reset-shot" class="retro-btn btn-small" title="Mulligan / Reset Shot">RESET</button>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

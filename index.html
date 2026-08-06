@@ -14,7 +14,7 @@
   <div id="app" class="retro-container">
 
     <!-- WELCOME / TITLE SCREEN OVERLAY -->
-    <div id="title-screen" class="title-screen-overlay">
+    <div id="title-screen" class="title-screen-overlay" onclick="window.startGameFromTitle && window.startGameFromTitle()">
       <div class="title-card-container">
         
         <!-- Arcade Header Badge -->
@@ -42,7 +42,7 @@
 
         <!-- Big Glowing Start Button -->
         <div class="title-action-box">
-          <button id="btn-start-game" class="retro-btn btn-title-start">PRESS SPACE OR CLICK TO TEE OFF</button>
+          <button id="btn-start-game" class="retro-btn btn-title-start" onclick="window.startGameFromTitle && window.startGameFromTitle()">PRESS SPACE OR CLICK TO TEE OFF</button>
         </div>
 
         <!-- Controls Reference Footer -->

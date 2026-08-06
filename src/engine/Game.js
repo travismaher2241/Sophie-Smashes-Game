@@ -45,11 +45,11 @@ export class Game {
     this.ball = new BallPhysics();
     this.flagstick = new Flagstick();
 
-    // UI
+    // UI & State Flags
     this.hud = null;
-
-    // Game state (Starts on Welcome / Title Screen)
     this.state = GAME_STATES.TITLE_SCREEN;
+    this.isPendingStart = false;
+    this.assetsLoaded = false;
     this.wind = { speed: 6, dirAngle: 45 };
 
     // Shot aim properties
@@ -59,89 +59,111 @@ export class Game {
     this.isDraggingMap = false;
     this.dragStartX = 0;
     this.dragStartY = 0;
+
+    // Attach global reference so inline HTML clicks work 100% reliably!
+    window.gameInstance = this;
+    window.startGameFromTitle = () => this.startGameFromTitle();
+
+    // Register UI & Event Listeners Immediately
+    this.hud = new HUD(this);
+    this.swingOverlay = new SwingOverlay(this);
+    this.setupInputs();
   }
 
   async boot() {
-    await this.assetLoader.loadAllAssets();
-
-    this.sceneManager = new SceneManager(this.assetLoader);
-    this.hud = new HUD(this);
-    this.swingOverlay = new SwingOverlay(this);
-
-    this.swingMeter.onStateChange = (meterState) => {
-      this.audioEngine.playMenuBeep();
-    };
-
-    this.swingMeter.onShotTriggered = (shotResult) => {
-      this.pendingShot = shotResult;
-      this.player.startSwingAnimation();
-    };
-
-    this.player.onImpactFrame = () => {
-      this.audioEngine.playImpactSnap();
-      this.audioEngine.playSwingWhoosh();
-
-      const club = this.clubManager.getCurrentClub();
-      const shotType = this.clubManager.getCurrentShotType();
-
-      const shot = this.pendingShot || {
-        powerInput: 1.0,
-        isOverswing: false,
-        overswingPenalty: 0,
-        snapError: 0.0,
-        shotTypeLabel: 'FULL SHOT',
-        isPerfect: true
-      };
-
-      const color = this.sceneManager.sampleTerrainPixel(this.ball.x, this.ball.y);
-      const currentTerrain = identifyTerrainFromColor(color.r, color.g, color.b, color.a);
-      const terrainLie = currentTerrain.lie || { powerFactor: 1.0, loftFactor: 1.0 };
-
-      const officialMeters = this.sceneManager.currentMetadata?.meters || 300;
-      const tee = this.sceneManager.getTeePosition();
-      const pin = this.sceneManager.getPinPosition();
-      const mapTotalPixelLength = Math.hypot(pin.x - tee.x, pin.y - tee.y) || 1745;
-
-      this.ball.launch({
-        aimAngle: this.aimAngle,
-        club: club,
-        shotType: shotType,
-        intentionalShape: 0,
-        powerInput: shot.powerInput,
-        snapError: shot.snapError,
-        overswingPenalty: shot.overswingPenalty,
-        terrainLie: terrainLie,
-        slope: { x: 0, y: 0 },
-        wind: this.wind,
-        officialHoleMeters: officialMeters,
-        mapTotalPixelLength: mapTotalPixelLength
-      });
-
-      this.sceneManager.recordStroke();
-
-      if (shot.isPerfect) {
-        this.hud.showShotPopup('PERFECT SNAP!!');
-      } else if (shot.snapError < -0.2) {
-        this.hud.showShotPopup('HOOK SHOT!');
-      } else if (shot.snapError > 0.2) {
-        this.hud.showShotPopup('SLICE SHOT!');
-      } else if (shot.isOverswing) {
-        this.hud.showShotPopup('OVERSWING HIT!');
-      } else {
-        this.hud.showShotPopup('GOOD HIT!');
-      }
-
-      setTimeout(() => {
-        this.closeSwingOverlay();
-        this.state = GAME_STATES.BALL_FLIGHT;
-      }, 350);
-    };
-
-    this.setupInputs();
-    this.switchHole(1);
+    // Show title screen immediately while assets load in background
     this.showTitleScreen();
 
+    // Start background animation loop
     requestAnimationFrame((timestamp) => this.loop(timestamp));
+
+    // Load All Assets
+    try {
+      await this.assetLoader.loadAllAssets();
+      this.sceneManager = new SceneManager(this.assetLoader);
+      this.assetsLoaded = true;
+
+      // Setup Swing Meter Callbacks
+      this.swingMeter.onStateChange = (meterState) => {
+        this.audioEngine.playMenuBeep();
+      };
+
+      this.swingMeter.onShotTriggered = (shotResult) => {
+        this.pendingShot = shotResult;
+        this.player.startSwingAnimation();
+      };
+
+      // Setup Player Impact Callback
+      this.player.onImpactFrame = () => {
+        this.audioEngine.playImpactSnap();
+        this.audioEngine.playSwingWhoosh();
+
+        const club = this.clubManager.getCurrentClub();
+        const shotType = this.clubManager.getCurrentShotType();
+
+        const shot = this.pendingShot || {
+          powerInput: 1.0,
+          isOverswing: false,
+          overswingPenalty: 0,
+          snapError: 0.0,
+          shotTypeLabel: 'FULL SHOT',
+          isPerfect: true
+        };
+
+        const color = this.sceneManager.sampleTerrainPixel(this.ball.x, this.ball.y);
+        const currentTerrain = identifyTerrainFromColor(color.r, color.g, color.b, color.a);
+        const terrainLie = currentTerrain.lie || { powerFactor: 1.0, loftFactor: 1.0 };
+
+        const officialMeters = this.sceneManager.currentMetadata?.meters || 300;
+        const tee = this.sceneManager.getTeePosition();
+        const pin = this.sceneManager.getPinPosition();
+        const mapTotalPixelLength = Math.hypot(pin.x - tee.x, pin.y - tee.y) || 1745;
+
+        this.ball.launch({
+          aimAngle: this.aimAngle,
+          club: club,
+          shotType: shotType,
+          intentionalShape: 0,
+          powerInput: shot.powerInput,
+          snapError: shot.snapError,
+          overswingPenalty: shot.overswingPenalty,
+          terrainLie: terrainLie,
+          slope: { x: 0, y: 0 },
+          wind: this.wind,
+          officialHoleMeters: officialMeters,
+          mapTotalPixelLength: mapTotalPixelLength
+        });
+
+        this.sceneManager.recordStroke();
+
+        if (shot.isPerfect) {
+          this.hud.showShotPopup('PERFECT SNAP!!');
+        } else if (shot.snapError < -0.2) {
+          this.hud.showShotPopup('HOOK SHOT!');
+        } else if (shot.snapError > 0.2) {
+          this.hud.showShotPopup('SLICE SHOT!');
+        } else if (shot.isOverswing) {
+          this.hud.showShotPopup('OVERSWING HIT!');
+        } else {
+          this.hud.showShotPopup('GOOD HIT!');
+        }
+
+        setTimeout(() => {
+          this.closeSwingOverlay();
+          this.state = GAME_STATES.BALL_FLIGHT;
+        }, 350);
+      };
+
+      // Initial Hole Load
+      this.switchHole(1);
+
+      // If user clicked start button while assets were loading, start game now!
+      if (this.isPendingStart) {
+        this.startGameFromTitle();
+      }
+    } catch (err) {
+      console.error('Asset load error:', err);
+    }
   }
 
   showTitleScreen() {
@@ -150,16 +172,22 @@ export class Game {
   }
 
   startGameFromTitle() {
-    if (this.state !== GAME_STATES.TITLE_SCREEN) return;
-    this.state = GAME_STATES.STRATEGY_AIM;
-
     try {
       this.audioEngine.init();
       this.audioEngine.playMenuBeep();
     } catch (e) {
-      console.warn('Audio Engine Init Warning:', e);
+      console.warn('Audio Init Warning:', e);
     }
 
+    if (!this.assetsLoaded) {
+      // Assets still downloading in background
+      this.isPendingStart = true;
+      const startBtn = document.getElementById('btn-start-game');
+      if (startBtn) startBtn.innerText = 'LOADING WARRAGUL COUNTRY CLUB...';
+      return;
+    }
+
+    this.state = GAME_STATES.STRATEGY_AIM;
     if (this.hud) {
       this.hud.hideTitleOverlay();
       this.hud.showBanner('WELCOME TO SOPHIE SMASHES!', 'WARRAGUL COUNTRY CLUB - HOLE 1', 3000);
@@ -287,6 +315,7 @@ export class Game {
   }
 
   switchHole(holeNum) {
+    if (!this.sceneManager) return;
     const meta = this.sceneManager.loadHole(holeNum);
     this.camera.setMapBounds(meta.width, meta.height);
 
@@ -349,6 +378,7 @@ export class Game {
   }
 
   resetCurrentShot() {
+    if (!this.sceneManager) return;
     const tee = this.sceneManager.getTeePosition();
     this.ball.setPosition(tee.x, tee.y, 0);
     this.player.setPosition(tee.x - 12, tee.y);
@@ -365,7 +395,7 @@ export class Game {
       this.player.update();
     }
 
-    if (this.state === GAME_STATES.BALL_FLIGHT || this.ball.isRolling) {
+    if (this.sceneManager && (this.state === GAME_STATES.BALL_FLIGHT || this.ball.isRolling)) {
       this.ball.update(
         (x, y) => this.sceneManager.sampleTerrainPixel(x, y),
         this.wind,
@@ -399,7 +429,7 @@ export class Game {
           }
         }
       }
-    } else if (this.state === GAME_STATES.STRATEGY_AIM && !this.camera.isManualPanning) {
+    } else if (this.sceneManager && this.state === GAME_STATES.STRATEGY_AIM && !this.camera.isManualPanning) {
       const club = this.clubManager.getCurrentClub();
       const effDist = this.clubManager.getEffectiveDistance();
       const officialMeters = this.sceneManager.currentMetadata?.meters || 300;
@@ -416,8 +446,10 @@ export class Game {
 
     this.camera.update();
 
-    const distMeters = this.sceneManager.calculateDistanceToPinInMeters(this.ball.x, this.ball.y);
-    this.hud.updateHoleInfo(this.sceneManager.currentMetadata, distMeters, this.sceneManager.getScoreSummary());
+    if (this.sceneManager) {
+      const distMeters = this.sceneManager.calculateDistanceToPinInMeters(this.ball.x, this.ball.y);
+      this.hud.updateHoleInfo(this.sceneManager.currentMetadata, distMeters, this.sceneManager.getScoreSummary());
+    }
   }
 
   render() {
@@ -425,42 +457,44 @@ export class Game {
 
     this.camera.applyTransform(this.ctx);
 
-    this.sceneManager.renderMap(this.ctx);
-    this.flagstick.render(this.ctx);
+    if (this.sceneManager) {
+      this.sceneManager.renderMap(this.ctx);
+      this.flagstick.render(this.ctx);
 
-    if (this.state === GAME_STATES.STRATEGY_AIM) {
-      const club = this.clubManager.getCurrentClub();
-      const effDist = this.clubManager.getEffectiveDistance();
-      const officialMeters = this.sceneManager.currentMetadata?.meters || 300;
-      const tee = this.sceneManager.getTeePosition();
-      const pin = this.sceneManager.getPinPosition();
-      const mapTotalPixelLength = Math.hypot(pin.x - tee.x, pin.y - tee.y) || 1745;
-      const pixelsPerMeter = mapTotalPixelLength / officialMeters;
+      if (this.state === GAME_STATES.STRATEGY_AIM) {
+        const club = this.clubManager.getCurrentClub();
+        const effDist = this.clubManager.getEffectiveDistance();
+        const officialMeters = this.sceneManager.currentMetadata?.meters || 300;
+        const tee = this.sceneManager.getTeePosition();
+        const pin = this.sceneManager.getPinPosition();
+        const mapTotalPixelLength = Math.hypot(pin.x - tee.x, pin.y - tee.y) || 1745;
+        const pixelsPerMeter = mapTotalPixelLength / officialMeters;
 
-      const targetDist = effDist * pixelsPerMeter;
-      const targetX = this.ball.x + Math.cos(this.aimAngle) * targetDist;
-      const targetY = this.ball.y + Math.sin(this.aimAngle) * targetDist;
+        const targetDist = effDist * pixelsPerMeter;
+        const targetX = this.ball.x + Math.cos(this.aimAngle) * targetDist;
+        const targetY = this.ball.y + Math.sin(this.aimAngle) * targetDist;
 
-      this.ctx.strokeStyle = 'rgba(255, 235, 59, 0.85)';
-      this.ctx.lineWidth = 2;
-      this.ctx.setLineDash([6, 6]);
-      this.ctx.beginPath();
-      this.ctx.moveTo(this.ball.x, this.ball.y);
-      this.ctx.lineTo(targetX, targetY);
-      this.ctx.stroke();
-      this.ctx.setLineDash([]);
+        this.ctx.strokeStyle = 'rgba(255, 235, 59, 0.85)';
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([6, 6]);
+        this.ctx.beginPath();
+        this.ctx.moveTo(this.ball.x, this.ball.y);
+        this.ctx.lineTo(targetX, targetY);
+        this.ctx.stroke();
+        this.ctx.setLineDash([]);
 
-      this.ctx.strokeStyle = '#00e676';
-      this.ctx.lineWidth = 2.5;
-      this.ctx.beginPath();
-      this.ctx.arc(targetX, targetY, 14, 0, Math.PI * 2);
-      this.ctx.stroke();
+        this.ctx.strokeStyle = '#00e676';
+        this.ctx.lineWidth = 2.5;
+        this.ctx.beginPath();
+        this.ctx.arc(targetX, targetY, 14, 0, Math.PI * 2);
+        this.ctx.stroke();
 
-      this.ctx.fillStyle = 'rgba(0, 230, 118, 0.25)';
-      this.ctx.fill();
+        this.ctx.fillStyle = 'rgba(0, 230, 118, 0.25)';
+        this.ctx.fill();
+      }
+
+      this.ball.render(this.ctx);
     }
-
-    this.ball.render(this.ctx);
 
     this.camera.restoreTransform(this.ctx);
 

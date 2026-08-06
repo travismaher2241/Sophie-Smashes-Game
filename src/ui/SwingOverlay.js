@@ -41,7 +41,7 @@ export class SwingOverlay {
   updateMeterUI(meter) {
     const pos = meter.cursorPos;
     if (this.meterCursor) {
-      this.meterCursor.style.left = `${pos}%`;
+      this.meterCursor.style.left = `${Math.max(0, Math.min(100, pos))}%`;
     }
 
     if (meter.state === SWING_STATES.POWER_GAUGE) {

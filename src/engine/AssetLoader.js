@@ -69,7 +69,7 @@ export class AssetLoader {
     const warragulHoles = {
       1: { name: 'Warragul Country Club - Hole 1', par: 4, meters: 307, teePos: { x: 478, y: 2019 }, pinPos: { x: 276, y: 274 } },
       2: { name: 'Warragul Country Club - Hole 2', par: 4, meters: 334, teePos: { x: 457, y: 2019 }, pinPos: { x: 327, y: 274 } },
-      3: { name: 'Warragul Country Club - Hole 3', par: 4, meters: 345, teePos: { x: 169, y: 1976 }, pinPos: { x: 467, y: 274 } },
+      3: { name: 'Warragul Country Club - Hole 3', par: 4, meters: 345, teePos: { x: 207, y: 1963 }, pinPos: { x: 493, y: 273 } },
       4: { name: 'Warragul Country Club - Hole 4', par: 4, meters: 265, teePos: { x: 149, y: 2019 }, pinPos: { x: 368, y: 274 } },
       5: { name: 'Warragul Country Club - Hole 5', par: 4, meters: 305, teePos: { x: 383, y: 2019 }, pinPos: { x: 366, y: 274 } },
       6: { name: 'Warragul Country Club - Hole 6', par: 4, meters: 240, teePos: { x: 318, y: 2019 }, pinPos: { x: 351, y: 274 } },

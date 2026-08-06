@@ -306,6 +306,9 @@ export class Game {
         if (this.ball.inHazard) {
           this.hud.showBanner('WATER HAZARD!', '+1 PENALTY STROKE', 2500);
           setTimeout(() => this.resetCurrentShot(), 1200);
+        } else if (this.ball.inOB) {
+          this.hud.showBanner('OUT OF BOUNDS!', '+1 PENALTY STROKE', 2500);
+          setTimeout(() => this.resetCurrentShot(), 1200);
         } else {
           this.player.setPosition(this.ball.x - 12, this.ball.y);
           const pin = this.sceneManager.getPinPosition();

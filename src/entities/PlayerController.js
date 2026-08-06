@@ -40,7 +40,7 @@ export class PlayerController {
 
   startSwingAnimation() {
     this.isPlayingSwing = true;
-    this.animState = PLAYER_ANIM_STATES.BACKSWING;
+    this.animState = PLAYER_ANIM_STATES.ADDRESS;
     this.currentFrame = 0;
     this.frameTimer = 0;
   }
@@ -71,31 +71,28 @@ export class PlayerController {
       this.frameTimer = 0;
       this.currentFrame++;
 
-      // Frame mapping (8 frames total):
-      // Frame 0 & 1: Address
-      // Frame 2 & 3: Backswing
-      // Frame 4: Top of swing
-      // Frame 5: Downswing
-      // Frame 6: Impact snap!
-      // Frame 7: Follow Through
+      // Frame mapping (5 poses drawn in the sprite sheet):
+      // Frame 0: Address (look up)
+      // Frame 1: Address
+      // Frame 2: Top of backswing
+      // Frame 3: Impact
+      // Frame 4: Follow-through / Finish - held as the final pose
 
-      if (this.currentFrame === 2) this.animState = PLAYER_ANIM_STATES.BACKSWING;
-      if (this.currentFrame === 3) this.animState = PLAYER_ANIM_STATES.TOP;
-      if (this.currentFrame === 4) this.animState = PLAYER_ANIM_STATES.DOWNSWING;
+      if (this.currentFrame === 2) this.animState = PLAYER_ANIM_STATES.TOP;
 
-      if (this.currentFrame === 5) {
+      if (this.currentFrame === 3) {
         this.animState = PLAYER_ANIM_STATES.IMPACT;
         if (this.onImpactFrame) {
           this.onImpactFrame();
         }
       }
 
-      if (this.currentFrame === 6 || this.currentFrame === 7) {
+      if (this.currentFrame === 4) {
         this.animState = PLAYER_ANIM_STATES.FOLLOW_THROUGH;
       }
 
-      if (this.currentFrame >= 8) {
-        this.currentFrame = 7; // Hold follow-through pose
+      if (this.currentFrame >= 4) {
+        this.currentFrame = 4; // Hold finish pose
         this.isPlayingSwing = false;
         if (this.onSwingComplete) {
           this.onSwingComplete();

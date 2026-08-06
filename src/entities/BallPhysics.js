@@ -30,6 +30,7 @@ export class BallPhysics {
     this.isRolling = false;
     this.isHoled = false;
     this.inHazard = false;
+    this.inOB = false;
 
     // Physical constants
     this.gravity = 0.38;
@@ -53,6 +54,7 @@ export class BallPhysics {
     this.isRolling = false;
     this.isHoled = false;
     this.inHazard = false;
+    this.inOB = false;
     this.trail = [];
   }
 
@@ -111,6 +113,7 @@ export class BallPhysics {
     this.trail = [];
     this.isHoled = false;
     this.inHazard = false;
+    this.inOB = false;
   }
 
   update(terrainPixelSampleCallback, wind = { speed: 0, dirAngle: 0 }, audioEngine = null) {
@@ -170,6 +173,17 @@ export class BallPhysics {
           return;
         }
 
+        // Check for Out of Bounds
+        if (this.currentTerrain.isOB) {
+          this.inAir = false;
+          this.isRolling = false;
+          this.inOB = true;
+          this.vx = 0;
+          this.vy = 0;
+          this.vz = 0;
+          return;
+        }
+
         // Calculate Terrain Response (Restitution Bounce)
         const bounceVz = -this.vz * this.currentTerrain.restitution;
 
@@ -197,6 +211,14 @@ export class BallPhysics {
         this.vx = 0;
         this.vy = 0;
         if (audioEngine) audioEngine.playWaterSplash();
+        return;
+      }
+
+      if (this.currentTerrain.isOB) {
+        this.isRolling = false;
+        this.inOB = true;
+        this.vx = 0;
+        this.vy = 0;
         return;
       }
 

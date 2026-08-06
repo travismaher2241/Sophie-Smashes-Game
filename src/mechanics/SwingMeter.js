@@ -35,6 +35,9 @@ export class SwingMeter {
 
     // Baseline sweet spot position at 0%
     this.sweetSpot = 2.5;
+    // How far past the 0% baseline the cursor may travel before it counts as a
+    // total whiff - gives the SLICE outcome a real, clickable window.
+    this.missFloor = -22;
 
     // Callbacks
     this.onStateChange = null;
@@ -136,10 +139,13 @@ export class SwingMeter {
       const returnSpeed = this.speed * (1.25 + this.overswingPenalty * 0.35);
       this.cursorPos += returnSpeed * this.direction;
 
-      if (this.cursorPos <= 0) {
-        // Missed baseline snap -> Late click / Slice penalty
-        this.cursorPos = 0;
-        this.snapError = 0.90; // Slice
+      // Let the cursor travel past the 0% baseline so a late click can still
+      // land in the SLICE zone (previously clamping at 0 made SLICE unreachable
+      // by clicking - it could only happen via a total whiff below).
+      if (this.cursorPos <= this.missFloor) {
+        // Ran all the way past the baseline with no click -> total whiff / worst-case slice
+        this.cursorPos = this.missFloor;
+        this.snapError = 1.0; // Slice
         this.state = SWING_STATES.COMPLETE;
         if (this.onStateChange) this.onStateChange(this.state);
         if (this.onShotTriggered) {
@@ -147,7 +153,7 @@ export class SwingMeter {
             powerInput: this.powerInput,
             isOverswing: this.isOverswing,
             overswingPenalty: this.overswingPenalty,
-            snapError: 0.90,
+            snapError: 1.0,
             shotTypeLabel: this.shotTypeLabel,
             isPerfect: false
           });

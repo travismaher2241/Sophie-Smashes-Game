@@ -64,7 +64,7 @@ export class Game {
     this.hud = new HUD(this);
     this.swingOverlay = new SwingOverlay(this);
 
-    // 3. Setup Swing Meter Callbacks (Click 1 Backswing, Click 2 Power, Click 3 Accuracy)
+    // 3. Setup Swing Meter Callbacks
     this.swingMeter.onStateChange = (meterState) => {
       this.audioEngine.playMenuBeep();
       if (meterState === SWING_STATES.POWER_GAUGE) {
@@ -76,7 +76,7 @@ export class Game {
       this.pendingShot = shotResult;
     };
 
-    // 4. Setup Player Impact Callback using Comprehensive Final Shot Calculator Formula
+    // 4. Setup Player Impact Callback using Calibrated Metric Map Flight Formula
     this.player.onImpactFrame = () => {
       this.audioEngine.playImpactSnap();
       this.audioEngine.playSwingWhoosh();
@@ -96,23 +96,28 @@ export class Game {
       const currentTerrain = identifyTerrainFromColor(color.r, color.g, color.b, color.a);
       const terrainLie = currentTerrain.lie || { powerFactor: 1.0, loftFactor: 1.0 };
 
-      // Launch Ball Physics with Final Shot Calculator Formula:
-      // Final ball flight = aim + selected club + intentional shot shape + power input + snap error + overswing penalty + lie + slope + wind + terrain response
+      const officialMeters = this.sceneManager.currentMetadata?.meters || 300;
+      const tee = this.sceneManager.getTeePosition();
+      const pin = this.sceneManager.getPinPosition();
+      const mapTotalPixelLength = Math.hypot(pin.x - tee.x, pin.y - tee.y) || 1745;
+
+      // Launch Ball Physics calibrated to map metric distance
       this.ball.launch({
         aimAngle: this.aimAngle,
         club: club,
-        intentionalShape: 0, // Straight shot line
+        intentionalShape: 0,
         powerInput: shot.powerInput,
         snapError: shot.snapError,
         overswingPenalty: shot.overswingPenalty,
         terrainLie: terrainLie,
         slope: { x: 0, y: 0 },
-        wind: this.wind
+        wind: this.wind,
+        officialHoleMeters: officialMeters,
+        mapTotalPixelLength: mapTotalPixelLength
       });
 
       this.sceneManager.recordStroke();
 
-      // Show shot result popup
       if (shot.isPerfect) {
         this.hud.showShotPopup('PERFECT SNAP!!');
       } else if (shot.snapError < -0.2) {
@@ -125,7 +130,6 @@ export class Game {
         this.hud.showShotPopup('GOOD HIT!');
       }
 
-      // Close Side-View Swing Overlay and transition back to Top-Down Map Flight!
       setTimeout(() => {
         this.closeSwingOverlay();
         this.state = GAME_STATES.BALL_FLIGHT;
@@ -207,9 +211,9 @@ export class Game {
 
     if (this.state === GAME_STATES.STRATEGY_AIM) {
       this.openSwingOverlay();
-      this.swingMeter.handleClick(); // Click 1: Start backswing
+      this.swingMeter.handleClick();
     } else if (this.state === GAME_STATES.SWING_STAGE) {
-      this.swingMeter.handleClick(); // Click 2: Set power, Click 3: Accuracy snap
+      this.swingMeter.handleClick();
     } else if (this.state === GAME_STATES.HOLE_COMPLETE) {
       const nextHole = (this.sceneManager.currentHoleIndex % 9) + 1;
       this.switchHole(nextHole);
@@ -241,7 +245,11 @@ export class Game {
     };
 
     const club = this.clubManager.getCurrentClub();
-    const targetDist = club.maxDistance * 2.2;
+    const officialMeters = meta.meters || 300;
+    const mapTotalPixelLength = Math.hypot(pin.x - tee.x, pin.y - tee.y) || 1745;
+    const pixelsPerMeter = mapTotalPixelLength / officialMeters;
+
+    const targetDist = club.maxDistance * pixelsPerMeter;
     const targetX = tee.x + Math.cos(this.aimAngle) * targetDist;
     const targetY = tee.y + Math.sin(this.aimAngle) * targetDist;
     this.camera.setAimTarget(tee.x, tee.y, targetX, targetY);
@@ -306,9 +314,6 @@ export class Game {
         if (this.ball.inHazard) {
           this.hud.showBanner('WATER HAZARD!', '+1 PENALTY STROKE', 2500);
           setTimeout(() => this.resetCurrentShot(), 1200);
-        } else if (this.ball.inOB) {
-          this.hud.showBanner('OUT OF BOUNDS!', '+1 PENALTY STROKE', 2500);
-          setTimeout(() => this.resetCurrentShot(), 1200);
         } else {
           this.player.setPosition(this.ball.x - 12, this.ball.y);
           const pin = this.sceneManager.getPinPosition();
@@ -326,7 +331,13 @@ export class Game {
       }
     } else if (this.state === GAME_STATES.STRATEGY_AIM) {
       const club = this.clubManager.getCurrentClub();
-      const targetDist = club.maxDistance * 2.2;
+      const officialMeters = this.sceneManager.currentMetadata?.meters || 300;
+      const tee = this.sceneManager.getTeePosition();
+      const pin = this.sceneManager.getPinPosition();
+      const mapTotalPixelLength = Math.hypot(pin.x - tee.x, pin.y - tee.y) || 1745;
+      const pixelsPerMeter = mapTotalPixelLength / officialMeters;
+
+      const targetDist = club.maxDistance * pixelsPerMeter;
       const targetX = this.ball.x + Math.cos(this.aimAngle) * targetDist;
       const targetY = this.ball.y + Math.sin(this.aimAngle) * targetDist;
       this.camera.setAimTarget(this.ball.x, this.ball.y, targetX, targetY);
@@ -348,7 +359,13 @@ export class Game {
 
     if (this.state === GAME_STATES.STRATEGY_AIM) {
       const club = this.clubManager.getCurrentClub();
-      const targetDist = club.maxDistance * 2.2;
+      const officialMeters = this.sceneManager.currentMetadata?.meters || 300;
+      const tee = this.sceneManager.getTeePosition();
+      const pin = this.sceneManager.getPinPosition();
+      const mapTotalPixelLength = Math.hypot(pin.x - tee.x, pin.y - tee.y) || 1745;
+      const pixelsPerMeter = mapTotalPixelLength / officialMeters;
+
+      const targetDist = club.maxDistance * pixelsPerMeter;
       const targetX = this.ball.x + Math.cos(this.aimAngle) * targetDist;
       const targetY = this.ball.y + Math.sin(this.aimAngle) * targetDist;
 

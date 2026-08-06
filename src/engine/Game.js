@@ -24,7 +24,7 @@ export class Game {
     this.ctx = this.canvas.getContext('2d');
     this.ctx.imageSmoothingEnabled = false;
 
-    // Full-Screen Top-Down Canvas Setup (960x720 ratio)
+    // Responsive Canvas Setup
     this.canvas.width = 960;
     this.canvas.height = 720;
 
@@ -53,6 +53,11 @@ export class Game {
 
     // Shot aim properties
     this.aimAngle = -Math.PI / 2; // Facing north toward green by default
+
+    // Touch & Drag Panning State
+    this.isDraggingMap = false;
+    this.dragStartX = 0;
+    this.dragStartY = 0;
   }
 
   async boot() {
@@ -65,15 +70,17 @@ export class Game {
     this.swingOverlay = new SwingOverlay(this);
 
     // 3. Setup Swing Meter Callbacks
+    // Click 1: Start power gauge (Sophie remains in address pose)
+    // Click 2: Lock power (Sophie remains in address pose)
+    // Click 3: Lock accuracy -> ONLY THEN trigger swing animation!
     this.swingMeter.onStateChange = (meterState) => {
       this.audioEngine.playMenuBeep();
-      if (meterState === SWING_STATES.POWER_GAUGE) {
-        this.player.startSwingAnimation();
-      }
     };
 
     this.swingMeter.onShotTriggered = (shotResult) => {
       this.pendingShot = shotResult;
+      // CLICK 3 LOCKS ACCURACY -> ONLY NOW TRIGGER SWING ANIMATION!
+      this.player.startSwingAnimation();
     };
 
     // 4. Setup Player Impact Callback using Calibrated Metric Map Flight Formula
@@ -91,7 +98,6 @@ export class Game {
         isPerfect: true
       };
 
-      // Read current terrain surface lie under ball
       const color = this.sceneManager.sampleTerrainPixel(this.ball.x, this.ball.y);
       const currentTerrain = identifyTerrainFromColor(color.r, color.g, color.b, color.a);
       const terrainLie = currentTerrain.lie || { powerFactor: 1.0, loftFactor: 1.0 };
@@ -101,7 +107,6 @@ export class Game {
       const pin = this.sceneManager.getPinPosition();
       const mapTotalPixelLength = Math.hypot(pin.x - tee.x, pin.y - tee.y) || 1745;
 
-      // Launch Ball Physics calibrated to map metric distance
       this.ball.launch({
         aimAngle: this.aimAngle,
         club: club,
@@ -173,15 +178,59 @@ export class Game {
       }
     });
 
-    this.canvas.addEventListener('mousedown', () => {
+    // Touch & Mouse Drag Panning on Top-Down Strategy Canvas
+    const onDragStart = (clientPos) => {
       if (this.state === GAME_STATES.STRATEGY_AIM) {
-        this.openSwingOverlay();
+        this.isDraggingMap = true;
+        this.dragStartX = clientPos.x;
+        this.dragStartY = clientPos.y;
       }
-    });
+    };
 
+    const onDragMove = (clientPos) => {
+      if (this.isDraggingMap && this.state === GAME_STATES.STRATEGY_AIM) {
+        const dx = clientPos.x - this.dragStartX;
+        const dy = clientPos.y - this.dragStartY;
+        this.camera.panBy(dx, dy);
+        this.dragStartX = clientPos.x;
+        this.dragStartY = clientPos.y;
+      }
+    };
+
+    const onDragEnd = () => {
+      this.isDraggingMap = false;
+    };
+
+    // Mouse Listeners
+    this.canvas.addEventListener('mousedown', (e) => onDragStart({ x: e.clientX, y: e.clientY }));
+    window.addEventListener('mousemove', (e) => onDragMove({ x: e.clientX, y: e.clientY }));
+    window.addEventListener('mouseup', onDragEnd);
+
+    // Touch Listeners (Mobile Panning)
+    this.canvas.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        onDragStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 1) {
+        onDragMove({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchend', onDragEnd);
+
+    // Side View Modal Canvas click
     const swingCanvas = document.getElementById('swing-canvas');
     if (swingCanvas) {
       swingCanvas.addEventListener('mousedown', () => {
+        if (this.state === GAME_STATES.SWING_STAGE) {
+          this.swingMeter.handleClick();
+        }
+      });
+      swingCanvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
         if (this.state === GAME_STATES.SWING_STAGE) {
           this.swingMeter.handleClick();
         }
@@ -211,9 +260,9 @@ export class Game {
 
     if (this.state === GAME_STATES.STRATEGY_AIM) {
       this.openSwingOverlay();
-      this.swingMeter.handleClick();
+      this.swingMeter.handleClick(); // Click 1: Start power gauge
     } else if (this.state === GAME_STATES.SWING_STAGE) {
-      this.swingMeter.handleClick();
+      this.swingMeter.handleClick(); // Click 2: Lock power, Click 3: Accuracy snap -> triggers swing!
     } else if (this.state === GAME_STATES.HOLE_COMPLETE) {
       const nextHole = (this.sceneManager.currentHoleIndex % 9) + 1;
       this.switchHole(nextHole);
@@ -244,15 +293,8 @@ export class Game {
       dirAngle: Math.floor(Math.random() * 360)
     };
 
-    const club = this.clubManager.getCurrentClub();
-    const officialMeters = meta.meters || 300;
-    const mapTotalPixelLength = Math.hypot(pin.x - tee.x, pin.y - tee.y) || 1745;
-    const pixelsPerMeter = mapTotalPixelLength / officialMeters;
-
-    const targetDist = club.maxDistance * pixelsPerMeter;
-    const targetX = tee.x + Math.cos(this.aimAngle) * targetDist;
-    const targetY = tee.y + Math.sin(this.aimAngle) * targetDist;
-    this.camera.setAimTarget(tee.x, tee.y, targetX, targetY);
+    // Center camera on Tee Box coordinates on load for clean mobile view
+    this.camera.jumpTo(tee.x, tee.y, 0.85);
 
     const distMeters = this.sceneManager.calculateDistanceToPinInMeters(tee.x, tee.y);
     this.hud.updateHoleInfo(meta, distMeters, this.sceneManager.getScoreSummary());
@@ -329,7 +371,7 @@ export class Game {
           }
         }
       }
-    } else if (this.state === GAME_STATES.STRATEGY_AIM) {
+    } else if (this.state === GAME_STATES.STRATEGY_AIM && !this.camera.isManualPanning) {
       const club = this.clubManager.getCurrentClub();
       const officialMeters = this.sceneManager.currentMetadata?.meters || 300;
       const tee = this.sceneManager.getTeePosition();

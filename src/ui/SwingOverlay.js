@@ -2,7 +2,7 @@ import { SWING_STATES } from '../mechanics/SwingMeter.js';
 
 /**
  * Side-View Swing Overlay (Links LS 98 / Arcade 16-Bit Style Pop-Up Stage)
- * Prominently displays Sophie's large pixel-art sprite (180-220px) in side profile
+ * Prominently displays Sophie's large pixel-art sprite (180x240px uniform box)
  * with 3-click swing meter, swing animation, and impact flash.
  */
 export class SwingOverlay {
@@ -41,17 +41,17 @@ export class SwingOverlay {
   updateMeterUI(meter) {
     const pos = meter.cursorPos;
     if (this.meterCursor) {
-      this.meterCursor.style.left = `${Math.max(0, Math.min(100, pos))}%`;
+      this.meterCursor.style.left = `${pos}%`;
     }
 
     if (meter.state === SWING_STATES.POWER_GAUGE) {
       if (this.meterFill) this.meterFill.style.width = `${pos}%`;
-      if (this.statusText) this.statusText.innerText = `CLICK SPACE / TAP: LOCK POWER (${Math.round(pos)}%)`;
+      if (this.statusText) this.statusText.innerText = `CLICK 2: LOCK POWER (${Math.round(pos)}%)`;
     } else if (meter.state === SWING_STATES.SNAP_GAUGE) {
-      if (this.statusText) this.statusText.innerText = 'CLICK SPACE / TAP: SNAP AT 0% BASELINE!';
+      if (this.statusText) this.statusText.innerText = 'CLICK 3: SNAP AT 0% BASELINE!';
     } else if (meter.state === SWING_STATES.IDLE) {
       if (this.meterFill) this.meterFill.style.width = '0%';
-      if (this.statusText) this.statusText.innerText = 'CLICK SPACE / TAP TO START POWER GAUGE';
+      if (this.statusText) this.statusText.innerText = 'CLICK 1: START POWER GAUGE';
     }
   }
 
@@ -113,10 +113,11 @@ export class SwingOverlay {
       ctx.fill();
     }
 
-    // 4. Render Large Prominent Sophie 16-Bit Player Character Sprite (Side Profile)
+    // 4. Render Large Prominent Sophie 16-Bit Player Sprite (Strict Uniform Bounding Box)
     const playerX = w * 0.32 - 45;
-    const playerY = groundY - 10;
-    const largeRenderSize = 200; // PROMINENT LARGE ARCADE SPRITE!
+    const playerY = groundY;
+    const renderW = 180;
+    const renderH = 240; // Uniform 180x240px box
 
     ctx.save();
     ctx.translate(playerX, playerY);
@@ -131,29 +132,29 @@ export class SwingOverlay {
       const srcX = col * meta.frameWidth;
       const srcY = row * meta.frameHeight;
 
-      // Player ground shadow
+      // Character ground shadow anchored at feet
       ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
       ctx.beginPath();
-      ctx.ellipse(0, 10, largeRenderSize * 0.22, largeRenderSize * 0.08, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, renderW * 0.22, renderW * 0.08, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Render Large Sophie Sprite facing target right
+      // Render Large Sophie Sprite with strict bottom-center feet anchor
       ctx.drawImage(
         spriteSheet,
         srcX, srcY, meta.frameWidth, meta.frameHeight,
-        -largeRenderSize / 2, -largeRenderSize + 15, largeRenderSize, largeRenderSize
+        -renderW / 2, -renderH + 10, renderW, renderH
       );
 
       // Impact Flash on Frame 5/6
       if (player.animState === 'IMPACT') {
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.arc(ballX - playerX, ballY - playerY, 14, 0, Math.PI * 2);
+        ctx.arc(ballX - playerX, ballY - playerY - 4, 14, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.fillStyle = '#ffeb3b';
         ctx.beginPath();
-        ctx.arc(ballX - playerX, ballY - playerY, 8, 0, Math.PI * 2);
+        ctx.arc(ballX - playerX, ballY - playerY - 4, 8, 0, Math.PI * 2);
         ctx.fill();
       }
     } else {

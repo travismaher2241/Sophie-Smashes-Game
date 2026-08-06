@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Sophie Smashes Golf 16-Bit</title>
-  <meta name="description" content="A 16-bit SNES inspired retro arcade golf game featuring Links LS 98 3-click swing mechanics and 9 challenging course maps.">
+  <title>Sophie Smashes Golf 16-Bit - Warragul Country Club</title>
+  <meta name="description" content="A 16-bit SNES inspired retro arcade golf game featuring Links LS 98 3-click swing mechanics at Warragul Country Club.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
@@ -24,7 +24,7 @@
       </div>
       <div class="hud-item dist-badge">
         <span class="hud-label">DISTANCE</span>
-        <span id="hud-dist-val" class="hud-value">385 YDS</span>
+        <span id="hud-dist-val" class="hud-value">307m</span>
       </div>
       <div class="hud-item score-badge">
         <span class="hud-label">SCORE</span>
@@ -46,8 +46,8 @@
       
       <!-- In-Game Arcade Overlay Alerts -->
       <div id="game-banner" class="game-banner hidden">
-        <div id="banner-text" class="banner-title">HOLE 1: PAR 4</div>
-        <div id="banner-subtext" class="banner-subtitle">PRESS SPACE TO SWING (3-CLICK)</div>
+        <div id="banner-text" class="banner-title">HOLE 1: WARRAGUL COUNTRY CLUB</div>
+        <div id="banner-subtext" class="banner-subtitle">PAR 4 - 307m</div>
       </div>
 
       <!-- Shot Result Popup -->
@@ -63,7 +63,7 @@
         <div class="club-display">
           <span class="hud-label">CLUB</span>
           <span id="hud-club-name" class="hud-value text-gold">DRIVER</span>
-          <span id="hud-club-dist" class="hud-subvalue">240 YDS</span>
+          <span id="hud-club-dist" class="hud-subvalue">220m</span>
         </div>
         <button id="btn-club-next" class="retro-btn" title="Next Club (Down Key)">▼</button>
       </div>
@@ -88,17 +88,17 @@
       <!-- Action Buttons & Hole Selector -->
       <div class="hud-control-group action-controls">
         <div class="hole-selector">
-          <span class="hud-label">SELECT MAP</span>
+          <span class="hud-label">WARRAGUL CC</span>
           <select id="select-hole" class="retro-select">
-            <option value="1">Hole 1 - Pine Valley (Par 4)</option>
-            <option value="2">Hole 2 - Dogleg Ridge (Par 4)</option>
-            <option value="3">Hole 3 - Island Green (Par 3)</option>
-            <option value="4">Hole 4 - Sand Canyon (Par 5)</option>
-            <option value="5">Hole 5 - Creek Crossing (Par 4)</option>
-            <option value="6">Hole 6 - Monster Par 5 (Par 5)</option>
-            <option value="7">Hole 7 - Cliffside Drop (Par 3)</option>
-            <option value="8">Hole 8 - Twin Bunkers (Par 4)</option>
-            <option value="9">Hole 9 - Championship Finish (Par 4)</option>
+            <option value="1">Hole 1 - 307m (Par 4)</option>
+            <option value="2">Hole 2 - 334m (Par 4)</option>
+            <option value="3">Hole 3 - 345m (Par 4)</option>
+            <option value="4">Hole 4 - 265m (Par 4)</option>
+            <option value="5">Hole 5 - 305m (Par 4)</option>
+            <option value="6">Hole 6 - 240m (Par 4)</option>
+            <option value="7">Hole 7 - 175m (Par 3)</option>
+            <option value="8">Hole 8 - 429m (Par 5)</option>
+            <option value="9">Hole 9 - 289m (Par 4)</option>
           </select>
         </div>
         <div class="toggle-buttons">

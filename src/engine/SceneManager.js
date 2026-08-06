@@ -1,7 +1,7 @@
 import { TERRAIN_TYPES } from '../utils/TerrainTypes.js';
 
 /**
- * Scene Manager & 16-Bit Map Handler
+ * Scene Manager & 16-Bit Map Handler for Warragul Country Club
  * Manages Hole 1 through 9, terrain pixel sampling, and score tracking.
  */
 export class SceneManager {
@@ -27,8 +27,8 @@ export class SceneManager {
     this.currentMetadata = this.assetLoader.getHoleMetadata(holeNum);
 
     // Update Offscreen Sample Canvas
-    this.sampleCanvas.width = this.currentMapCanvas.width || 1280;
-    this.sampleCanvas.height = this.currentMapCanvas.height || 960;
+    this.sampleCanvas.width = this.currentMapCanvas.width || 724;
+    this.sampleCanvas.height = this.currentMapCanvas.height || 2172;
     this.sampleCtx.drawImage(this.currentMapCanvas, 0, 0);
 
     this.currentHoleStrokes = 0;
@@ -36,11 +36,11 @@ export class SceneManager {
   }
 
   getTeePosition() {
-    return this.currentMetadata ? this.currentMetadata.teePos : { x: 640, y: 800 };
+    return this.currentMetadata ? this.currentMetadata.teePos : { x: 362, y: 2009 };
   }
 
   getPinPosition() {
-    return this.currentMetadata ? this.currentMetadata.pinPos : { x: 640, y: 200 };
+    return this.currentMetadata ? this.currentMetadata.pinPos : { x: 362, y: 174 };
   }
 
   /**
@@ -62,11 +62,18 @@ export class SceneManager {
     }
   }
 
-  calculateDistanceToPinInYards(ballX, ballY) {
+  calculateDistanceToPinInMeters(ballX, ballY) {
     const pin = this.getPinPosition();
     const pixelDist = Math.hypot(pin.x - ballX, pin.y - ballY);
-    // Scale: ~2.2 pixels per yard
-    return Math.round(pixelDist / 2.2);
+
+    const tee = this.getTeePosition();
+    const totalPixelDist = Math.hypot(pin.x - tee.x, pin.y - tee.y);
+    const officialMeters = this.currentMetadata ? (this.currentMetadata.meters || 300) : 300;
+
+    if (totalPixelDist === 0) return 0;
+
+    const meters = Math.round((pixelDist / totalPixelDist) * officialMeters);
+    return Math.max(0, meters);
   }
 
   recordStroke() {

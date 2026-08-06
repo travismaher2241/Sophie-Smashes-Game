@@ -2,8 +2,7 @@ import { generateSophieSpriteSheet, generateProceduralHoleMap } from '../utils/P
 
 /**
  * 16-Bit Asset Pipeline & Asset Loader
- * Resolves relative URLs for static deployment on Vercel
- * and supplies pristine procedural 16-bit fallbacks.
+ * Configured for Warragul Country Club Holes 1 to 9
  */
 export class AssetLoader {
   constructor() {
@@ -31,7 +30,6 @@ export class AssetLoader {
         const h = img.naturalHeight || img.height;
 
         if (w >= 4000) {
-          // 4x2 Grid (4344 x 2896)
           this.spriteMetadata = {
             cols: 4,
             rows: 2,
@@ -41,7 +39,6 @@ export class AssetLoader {
             renderSize: 64
           };
         } else {
-          // Standard horizontal 8-frame sheet
           this.spriteMetadata = {
             cols: 8,
             rows: 1,
@@ -51,15 +48,11 @@ export class AssetLoader {
             renderSize: 48
           };
         }
-        console.log(`Loaded custom player sprite sheet from ${url}`);
         break;
-      } catch {
-        // Try next URL
-      }
+      } catch {}
     }
 
     if (!this.sophieSpriteSheet) {
-      console.log('Using procedural 16-bit Sophie sprite sheet fallback.');
       this.sophieSpriteSheet = generateSophieSpriteSheet();
       this.spriteMetadata = {
         cols: 8,
@@ -70,6 +63,19 @@ export class AssetLoader {
         renderSize: 48
       };
     }
+
+    // Official Warragul Country Club Hole Data (Meters & Par)
+    const warragulHoles = {
+      1: { name: 'Warragul Country Club - Hole 1', par: 4, meters: 307 },
+      2: { name: 'Warragul Country Club - Hole 2', par: 4, meters: 334 },
+      3: { name: 'Warragul Country Club - Hole 3', par: 4, meters: 345 },
+      4: { name: 'Warragul Country Club - Hole 4', par: 4, meters: 265 },
+      5: { name: 'Warragul Country Club - Hole 5', par: 4, meters: 305 },
+      6: { name: 'Warragul Country Club - Hole 6', par: 4, meters: 240 },
+      7: { name: 'Warragul Country Club - Hole 7', par: 3, meters: 175 },
+      8: { name: 'Warragul Country Club - Hole 8', par: 5, meters: 429 },
+      9: { name: 'Warragul Country Club - Hole 9', par: 4, meters: 289 }
+    };
 
     // 2. Load 9 Pre-rendered Hole Maps (724x2172)
     for (let h = 1; h <= 9; h++) {
@@ -84,38 +90,32 @@ export class AssetLoader {
         }
       }
 
+      const holeData = warragulHoles[h];
+
       if (img) {
         this.holeMaps.set(h, img);
         const w = img.naturalWidth || img.width || 724;
         const hPx = img.naturalHeight || img.height || 2172;
 
-        const parMap = { 1: 4, 2: 4, 3: 3, 4: 5, 5: 4, 6: 5, 7: 3, 8: 4, 9: 4 };
-        const nameMap = {
-          1: 'Pine Valley',
-          2: 'Dogleg Ridge',
-          3: 'Island Green',
-          4: 'Sand Canyon',
-          5: 'Creek Crossing',
-          6: 'Monster Par 5',
-          7: 'Cliffside Drop',
-          8: 'Twin Bunkers',
-          9: 'Championship Finish'
-        };
-
         this.holeMetadata.set(h, {
           hole: h,
-          name: nameMap[h] || `Hole ${h}`,
-          par: parMap[h] || 4,
+          name: holeData.name,
+          par: holeData.par,
+          meters: holeData.meters,
           teePos: { x: Math.round(w / 2), y: Math.round(hPx * 0.925) },
           pinPos: { x: Math.round(w / 2), y: Math.round(hPx * 0.08) },
           width: w,
           height: hPx
         });
       } else {
-        // Fallback procedural map
         const procMap = generateProceduralHoleMap(h);
         this.holeMaps.set(h, procMap.canvas);
-        this.holeMetadata.set(h, procMap.metadata);
+        this.holeMetadata.set(h, {
+          ...procMap.metadata,
+          name: holeData.name,
+          par: holeData.par,
+          meters: holeData.meters
+        });
       }
     }
 
@@ -138,20 +138,15 @@ export class AssetLoader {
   }
 
   getHoleMetadata(holeNum) {
-    if (this.holeMetadata.has(holeNum)) {
-      return this.holeMetadata.get(holeNum);
-    }
-    const mapCanvas = this.getHoleMap(holeNum);
-    const w = mapCanvas.width || 724;
-    const h = mapCanvas.height || 2172;
-    return {
+    return this.holeMetadata.get(holeNum) || {
       hole: holeNum,
-      name: `Hole ${holeNum}`,
+      name: `Warragul Country Club - Hole ${holeNum}`,
       par: 4,
-      teePos: { x: Math.round(w / 2), y: Math.round(h * 0.925) },
-      pinPos: { x: Math.round(w / 2), y: Math.round(h * 0.08) },
-      width: w,
-      height: h
+      meters: 300,
+      teePos: { x: 362, y: 2009 },
+      pinPos: { x: 362, y: 174 },
+      width: 724,
+      height: 2172
     };
   }
 

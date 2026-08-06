@@ -1,7 +1,7 @@
 import { SWING_STATES } from '../mechanics/SwingMeter.js';
 
 /**
- * 16-Bit SNES Arcade & Links LS 98 Style HUD UI Manager
+ * 16-Bit SNES Arcade & Links LS 98 Style HUD UI Manager for Warragul Country Club
  */
 export class HUD {
   constructor(game) {
@@ -73,10 +73,10 @@ export class HUD {
     });
   }
 
-  updateHoleInfo(meta, distanceYards, scoreText) {
+  updateHoleInfo(meta, distanceMeters, scoreText) {
     if (this.elHoleNum) this.elHoleNum.innerText = meta.hole;
     if (this.elParVal) this.elParVal.innerText = meta.par;
-    if (this.elDistVal) this.elDistVal.innerText = `${distanceYards} YDS`;
+    if (this.elDistVal) this.elDistVal.innerText = `${distanceMeters}m`;
     if (this.elScoreVal) this.elScoreVal.innerText = scoreText;
     if (this.selectHole) this.selectHole.value = meta.hole;
   }
@@ -90,7 +90,7 @@ export class HUD {
 
   updateClubInfo(club) {
     if (this.elClubName) this.elClubName.innerText = club.name;
-    if (this.elClubDist) this.elClubDist.innerText = `${club.maxDistance} YDS`;
+    if (this.elClubDist) this.elClubDist.innerText = `${club.maxDistance}m`;
   }
 
   updateSwingMeter(meter) {

@@ -1,11 +1,11 @@
 /**
- * 16-Bit Golf Club Specifications & Trajectory Physics Models
+ * 16-Bit Golf Club Specifications & Trajectory Physics Models (Metric / Meters)
  */
 export const CLUBS = [
   {
     id: 'DRIVER',
     name: 'DRIVER (1D)',
-    maxDistance: 240, // Yards
+    maxDistance: 220, // Meters
     loft: 10,        // Launch angle (degrees)
     maxHeight: 45,   // Peak 3D altitude
     rollFactor: 1.2  // Ground roll multiplier
@@ -13,7 +13,7 @@ export const CLUBS = [
   {
     id: '3WOOD',
     name: '3-WOOD (3W)',
-    maxDistance: 215,
+    maxDistance: 195,
     loft: 15,
     maxHeight: 48,
     rollFactor: 1.1
@@ -21,7 +21,7 @@ export const CLUBS = [
   {
     id: '5IRON',
     name: '5-IRON (5I)',
-    maxDistance: 180,
+    maxDistance: 165,
     loft: 22,
     maxHeight: 52,
     rollFactor: 0.95
@@ -29,7 +29,7 @@ export const CLUBS = [
   {
     id: '7IRON',
     name: '7-IRON (7I)',
-    maxDistance: 150,
+    maxDistance: 135,
     loft: 30,
     maxHeight: 56,
     rollFactor: 0.8
@@ -37,7 +37,7 @@ export const CLUBS = [
   {
     id: 'PWEDGE',
     name: 'PITCH WEDGE (PW)',
-    maxDistance: 110,
+    maxDistance: 100,
     loft: 42,
     maxHeight: 62,
     rollFactor: 0.5
@@ -45,7 +45,7 @@ export const CLUBS = [
   {
     id: 'SWEDGE',
     name: 'SAND WEDGE (SW)',
-    maxDistance: 80,
+    maxDistance: 75,
     loft: 54,
     maxHeight: 68,
     rollFactor: 0.3
@@ -53,7 +53,7 @@ export const CLUBS = [
   {
     id: 'PUTTER',
     name: 'PUTTER (PT)',
-    maxDistance: 40,
+    maxDistance: 35,
     loft: 0,
     maxHeight: 0,
     rollFactor: 1.5,

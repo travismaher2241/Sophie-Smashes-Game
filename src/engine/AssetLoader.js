@@ -2,7 +2,7 @@ import { generateSophieSpriteSheet, generateProceduralHoleMap } from '../utils/P
 
 /**
  * 16-Bit Asset Pipeline & Asset Loader
- * Explicit Tee-Box & Pin-Flag Map Coordinates for Warragul Country Club
+ * Exact Bottom Tee-Box & Green Pin Coordinates for Warragul Country Club
  */
 export class AssetLoader {
   constructor() {
@@ -30,17 +30,16 @@ export class AssetLoader {
         const h = img.naturalHeight || img.height;
 
         if (w >= 4000) {
-          // 4x2 Grid (4344 x 2896) -> Scale up render size for prominent arcade character view!
+          // 4x2 Grid (4344 x 2896) -> Scaled up to 115px for prominent arcade character view
           this.spriteMetadata = {
             cols: 4,
             rows: 2,
             frameWidth: Math.round(w / 4),
             frameHeight: Math.round(h / 2),
             totalFrames: 8,
-            renderSize: 115 // Scaled up to look like a prominent arcade character
+            renderSize: 115
           };
         } else {
-          // Standard horizontal 8-frame sheet
           this.spriteMetadata = {
             cols: 8,
             rows: 1,
@@ -62,21 +61,21 @@ export class AssetLoader {
         frameWidth: 48,
         frameHeight: 48,
         totalFrames: 8,
-        renderSize: 96
+        renderSize: 115
       };
     }
 
-    // Explicit Tee-Box & Green Pin Coordinates for all 9 Warragul Country Club Hole Maps
+    // Exact Bottom Tee-Box & Green Pin Coordinates for all 9 Warragul Country Club Hole Maps
     const warragulHoles = {
-      1: { name: 'Warragul Country Club - Hole 1', par: 4, meters: 307, teePos: { x: 498, y: 1811 }, pinPos: { x: 285, y: 299 } },
-      2: { name: 'Warragul Country Club - Hole 2', par: 4, meters: 334, teePos: { x: 430, y: 1791 }, pinPos: { x: 328, y: 308 } },
-      3: { name: 'Warragul Country Club - Hole 3', par: 4, meters: 345, teePos: { x: 219, y: 1735 }, pinPos: { x: 479, y: 335 } },
-      4: { name: 'Warragul Country Club - Hole 4', par: 4, meters: 265, teePos: { x: 185, y: 1804 }, pinPos: { x: 417, y: 310 } },
-      5: { name: 'Warragul Country Club - Hole 5', par: 4, meters: 305, teePos: { x: 376, y: 1832 }, pinPos: { x: 373, y: 290 } },
-      6: { name: 'Warragul Country Club - Hole 6', par: 4, meters: 240, teePos: { x: 351, y: 1766 }, pinPos: { x: 351, y: 309 } },
-      7: { name: 'Warragul Country Club - Hole 7', par: 3, meters: 175, teePos: { x: 339, y: 1806 }, pinPos: { x: 385, y: 300 } },
-      8: { name: 'Warragul Country Club - Hole 8', par: 5, meters: 429, teePos: { x: 526, y: 1754 }, pinPos: { x: 323, y: 300 } },
-      9: { name: 'Warragul Country Club - Hole 9', par: 4, meters: 289, teePos: { x: 393, y: 1788 }, pinPos: { x: 295, y: 301 } }
+      1: { name: 'Warragul Country Club - Hole 1', par: 4, meters: 307, teePos: { x: 478, y: 2019 }, pinPos: { x: 276, y: 274 } },
+      2: { name: 'Warragul Country Club - Hole 2', par: 4, meters: 334, teePos: { x: 457, y: 2019 }, pinPos: { x: 327, y: 274 } },
+      3: { name: 'Warragul Country Club - Hole 3', par: 4, meters: 345, teePos: { x: 169, y: 1976 }, pinPos: { x: 467, y: 274 } },
+      4: { name: 'Warragul Country Club - Hole 4', par: 4, meters: 265, teePos: { x: 149, y: 2019 }, pinPos: { x: 368, y: 274 } },
+      5: { name: 'Warragul Country Club - Hole 5', par: 4, meters: 305, teePos: { x: 383, y: 2019 }, pinPos: { x: 366, y: 274 } },
+      6: { name: 'Warragul Country Club - Hole 6', par: 4, meters: 240, teePos: { x: 318, y: 2019 }, pinPos: { x: 351, y: 274 } },
+      7: { name: 'Warragul Country Club - Hole 7', par: 3, meters: 175, teePos: { x: 315, y: 2016 }, pinPos: { x: 369, y: 274 } },
+      8: { name: 'Warragul Country Club - Hole 8', par: 5, meters: 429, teePos: { x: 563, y: 2011 }, pinPos: { x: 327, y: 274 } },
+      9: { name: 'Warragul Country Club - Hole 9', par: 4, meters: 289, teePos: { x: 406, y: 2019 }, pinPos: { x: 329, y: 274 } }
     };
 
     // 2. Load 9 Pre-rendered Hole Maps (724x2172)
@@ -147,8 +146,8 @@ export class AssetLoader {
       name: `Warragul Country Club - Hole ${holeNum}`,
       par: 4,
       meters: 300,
-      teePos: { x: 362, y: 1800 },
-      pinPos: { x: 362, y: 300 },
+      teePos: { x: 478, y: 2019 },
+      pinPos: { x: 276, y: 274 },
       width: 724,
       height: 2172
     };

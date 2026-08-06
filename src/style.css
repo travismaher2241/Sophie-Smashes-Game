@@ -44,13 +44,13 @@ html, body {
 /* Main Container Frame */
 .retro-container {
   width: 100vw;
-  max-width: 900px;
+  max-width: 1000px;
   height: 100vh;
-  max-height: 780px;
+  max-height: 820px;
   background: var(--panel-bg);
   border: 4px solid var(--panel-border);
   border-radius: 8px;
-  box-shadow: 0 0 30px rgba(0, 0, 0, 0.9), inset 0 0 10px rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 35px rgba(0, 0, 0, 0.95), inset 0 0 10px rgba(255, 255, 255, 0.05);
   display: flex;
   flex-direction: column;
   position: relative;
@@ -148,7 +148,7 @@ html, body {
   pointer-events: none;
   background: linear-gradient(
     rgba(18, 16, 16, 0) 50%, 
-    rgba(0, 0, 0, 0.25) 50%
+    rgba(0, 0, 0, 0.22) 50%
   ), linear-gradient(
     90deg,
     rgba(255, 0, 0, 0.03),
@@ -202,10 +202,10 @@ html, body {
 /* Shot Result Popup */
 .shot-popup {
   position: absolute;
-  top: 50%;
+  top: 45%;
   left: 50%;
   transform: translate(-50%, -50%) scale(1);
-  background: rgba(0, 0, 0, 0.85);
+  background: rgba(0, 0, 0, 0.88);
   border: 3px solid var(--snes-green);
   color: var(--snes-green);
   padding: 12px 28px;
@@ -260,11 +260,11 @@ html, body {
 .text-gold { color: var(--snes-gold) !important; }
 .text-green { color: var(--snes-green) !important; }
 
-/* 3-Click Swing Gauge */
+/* Links LS 98 Style 3-Click Swing Gauge */
 .swing-meter-container {
   flex: 1;
-  max-width: 380px;
-  background: rgba(0, 0, 0, 0.5);
+  max-width: 420px;
+  background: rgba(0, 0, 0, 0.55);
   border: 2px solid var(--panel-border);
   border-radius: 6px;
   padding: 6px 12px;
@@ -276,14 +276,14 @@ html, body {
 .meter-labels {
   display: flex;
   justify-content: space-between;
-  font-size: 7px;
+  font-size: 7.5px;
   color: var(--text-muted);
   font-weight: bold;
 }
 
 .meter-bar-track {
   width: 100%;
-  height: 18px;
+  height: 20px;
   background: #101420;
   border: 2px solid #334060;
   border-radius: 3px;
@@ -291,14 +291,15 @@ html, body {
   overflow: hidden;
 }
 
+/* Links LS 98 Baseline Sweet Spot at 0% Baseline */
 .meter-sweet-spot {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 47%;
-  width: 6%;
+  left: 0%;
+  width: 5%;
   background: var(--snes-green);
-  box-shadow: 0 0 8px var(--snes-green);
+  box-shadow: 0 0 10px var(--snes-green);
   z-index: 1;
 }
 
@@ -308,7 +309,7 @@ html, body {
   bottom: 0;
   left: 0;
   width: 0%;
-  background: linear-gradient(90deg, var(--snes-blue) 0%, var(--snes-gold) 75%, var(--snes-red) 100%);
+  background: linear-gradient(90deg, var(--snes-green) 0%, var(--snes-blue) 60%, var(--snes-gold) 85%, var(--snes-red) 100%);
   transition: none;
 }
 
@@ -320,14 +321,14 @@ html, body {
   width: 5px;
   background: #ffffff;
   border: 1px solid #000000;
-  box-shadow: 0 0 6px #ffffff;
+  box-shadow: 0 0 8px #ffffff;
   z-index: 3;
   transform: translateX(-50%);
 }
 
 .meter-action-hint {
   text-align: center;
-  font-size: 8px;
+  font-size: 8.5px;
   color: var(--snes-gold);
 }
 

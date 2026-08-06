@@ -1,7 +1,7 @@
 import { SWING_STATES } from '../mechanics/SwingMeter.js';
 
 /**
- * 16-Bit SNES Arcade HUD UI Manager
+ * 16-Bit SNES Arcade & Links LS 98 Style HUD UI Manager
  */
 export class HUD {
   constructor(game) {
@@ -25,6 +25,7 @@ export class HUD {
     this.meterStatusText = document.getElementById('meter-status-text');
 
     this.selectHole = document.getElementById('select-hole');
+    this.btnMapToggle = document.getElementById('btn-map-toggle');
     this.btnCrtToggle = document.getElementById('btn-crt-toggle');
     this.btnAudioToggle = document.getElementById('btn-audio-toggle');
     this.btnResetShot = document.getElementById('btn-reset-shot');
@@ -47,6 +48,14 @@ export class HUD {
     this.selectHole.addEventListener('change', (e) => {
       this.game.switchHole(parseInt(e.target.value, 10));
     });
+
+    if (this.btnMapToggle) {
+      this.btnMapToggle.addEventListener('click', () => {
+        const isFull = this.game.toggleFullOverview();
+        this.btnMapToggle.classList.toggle('active', isFull);
+        this.btnMapToggle.innerText = isFull ? 'AIM VIEW' : 'FULL MAP';
+      });
+    }
 
     this.btnCrtToggle.addEventListener('click', () => {
       const active = this.crtOverlay.classList.toggle('disabled');
@@ -94,10 +103,10 @@ export class HUD {
       if (this.meterFill) this.meterFill.style.width = `${pos}%`;
       if (this.meterStatusText) this.meterStatusText.innerText = `CLICK SPACE: SET POWER (${Math.round(pos)}%)`;
     } else if (meter.state === SWING_STATES.SNAP_GAUGE) {
-      if (this.meterStatusText) this.meterStatusText.innerText = 'CLICK SPACE: SNAP SWEET SPOT!';
+      if (this.meterStatusText) this.meterStatusText.innerText = 'CLICK SPACE: SNAP AT 0% BASELINE!';
     } else if (meter.state === SWING_STATES.IDLE) {
       if (this.meterFill) this.meterFill.style.width = '0%';
-      if (this.meterStatusText) this.meterStatusText.innerText = 'PRESS SPACE / CLICK TO SWING';
+      if (this.meterStatusText) this.meterStatusText.innerText = 'PRESS SPACE / CLICK TO START 3-CLICK SWING';
     }
   }
 

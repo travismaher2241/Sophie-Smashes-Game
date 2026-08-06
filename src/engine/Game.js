@@ -1,5 +1,4 @@
 import { AssetLoader } from './AssetLoader.js';
-
 import { SceneManager } from './SceneManager.js';
 import { Camera } from './Camera.js';
 import { AudioEngine } from './AudioEngine.js';
@@ -24,10 +23,14 @@ export class Game {
     this.ctx = this.canvas.getContext('2d');
     this.ctx.imageSmoothingEnabled = false;
 
+    // Canvas resolution setup (800x600 widescreen retro ratio)
+    this.canvas.width = 800;
+    this.canvas.height = 600;
+
     // Core Systems
     this.assetLoader = new AssetLoader();
     this.sceneManager = null;
-    this.camera = new Camera(640, 480);
+    this.camera = new Camera(800, 600);
     this.audioEngine = new AudioEngine();
     this.clubManager = new ClubManager();
     this.swingMeter = new SwingMeter();
@@ -46,10 +49,6 @@ export class Game {
 
     // Shot aim properties
     this.aimAngle = -Math.PI / 2; // Facing north toward green by default
-    this.aimDistance = 240;
-
-    // Control flags
-    this.isDraggingAim = false;
   }
 
   async boot() {
@@ -60,7 +59,7 @@ export class Game {
     this.sceneManager = new SceneManager(this.assetLoader);
     this.hud = new HUD(this);
 
-    // 3. Setup Swing Meter Callbacks
+    // 3. Setup Swing Meter Callbacks (Links LS 98 Style 3-Click)
     this.swingMeter.onStateChange = (meterState) => {
       this.audioEngine.playMenuBeep();
       if (meterState === SWING_STATES.POWER_GAUGE) {
@@ -71,7 +70,6 @@ export class Game {
     };
 
     this.swingMeter.onShotTriggered = (shotResult) => {
-      // Calculated shot parameters
       this.pendingShot = shotResult;
     };
 
@@ -92,16 +90,16 @@ export class Game {
       // Show accuracy result popup
       if (shot.isPerfect) {
         this.hud.showShotPopup('PERFECT SNAP!!');
-      } else if (shot.snap < -0.3) {
+      } else if (shot.snap < -0.2) {
         this.hud.showShotPopup('HOOK SHOT!');
-      } else if (shot.snap > 0.3) {
+      } else if (shot.snap > 0.2) {
         this.hud.showShotPopup('SLICE SHOT!');
       } else {
         this.hud.showShotPopup('GOOD HIT!');
       }
     };
 
-    // 5. Register Keyboard & Mouse Inputs
+    // 5. Register Inputs
     this.setupInputs();
 
     // 6. Load Hole 1
@@ -112,19 +110,20 @@ export class Game {
   }
 
   setupInputs() {
-    // Keyboard listener
     window.addEventListener('keydown', (e) => {
       if (e.code === 'Space') {
         e.preventDefault();
         this.handleActionTrigger();
       } else if (e.code === 'ArrowLeft') {
-        this.adjustAim(-0.06);
+        this.adjustAim(-0.05);
       } else if (e.code === 'ArrowRight') {
-        this.adjustAim(0.06);
+        this.adjustAim(0.05);
       } else if (e.code === 'ArrowUp') {
         this.changeClub(-1);
       } else if (e.code === 'ArrowDown') {
         this.changeClub(1);
+      } else if (e.code === 'KeyM') {
+        this.toggleFullOverview();
       } else if (e.code === 'KeyR') {
         this.resetCurrentShot();
       } else if (e.code.startsWith('Digit')) {
@@ -133,9 +132,8 @@ export class Game {
       }
     });
 
-    // Canvas click & mouse aim drag listener
     this.canvas.addEventListener('mousedown', (e) => {
-      if (this.state === GAME_STATES.AIMING) {
+      if (this.state === GAME_STATES.AIMING || this.state === GAME_STATES.SWINGING) {
         this.handleActionTrigger();
       }
     });
@@ -147,7 +145,6 @@ export class Game {
     if (this.state === GAME_STATES.AIMING || this.state === GAME_STATES.SWINGING) {
       this.swingMeter.handleClick();
     } else if (this.state === GAME_STATES.HOLE_COMPLETE) {
-      // Advance to next hole
       const nextHole = (this.sceneManager.currentHoleIndex % 9) + 1;
       this.switchHole(nextHole);
     }
@@ -176,18 +173,22 @@ export class Game {
 
     // Randomize Wind
     this.wind = {
-      speed: Math.floor(Math.random() * 12) + 2,
+      speed: Math.floor(Math.random() * 10) + 2,
       dirAngle: Math.floor(Math.random() * 360)
     };
 
-    // Camera jump to tee
-    this.camera.jumpTo(tee.x, tee.y);
+    // Calculate initial landing target and set smart framing camera
+    const club = this.clubManager.getCurrentClub();
+    const targetDist = club.maxDistance * 2.2;
+    const targetX = tee.x + Math.cos(this.aimAngle) * targetDist;
+    const targetY = tee.y + Math.sin(this.aimAngle) * targetDist;
+    this.camera.setAimTarget(tee.x, tee.y, targetX, targetY);
 
     // Update HUD
     this.hud.updateHoleInfo(meta, this.sceneManager.calculateDistanceToPinInYards(this.ball.x, this.ball.y), this.sceneManager.getScoreSummary());
     this.hud.updateClubInfo(this.clubManager.getCurrentClub());
     this.hud.updateWind(this.wind.speed, this.wind.dirAngle);
-    this.hud.showBanner(`HOLE ${meta.hole}: ${meta.name.toUpperCase()}`, `PAR ${meta.par} - ${meta.width > 0 ? this.sceneManager.calculateDistanceToPinInYards(tee.x, tee.y) : 380} YDS`);
+    this.hud.showBanner(`HOLE ${meta.hole}: ${meta.name.toUpperCase()}`, `PAR ${meta.par} - ${this.sceneManager.calculateDistanceToPinInYards(tee.x, tee.y)} YDS`);
   }
 
   adjustAim(deltaAngle) {
@@ -203,6 +204,10 @@ export class Game {
     this.audioEngine.playMenuBeep();
   }
 
+  toggleFullOverview() {
+    return this.camera.toggleFullOverview();
+  }
+
   resetCurrentShot() {
     const tee = this.sceneManager.getTeePosition();
     this.ball.setPosition(tee.x, tee.y, 0);
@@ -210,7 +215,6 @@ export class Game {
     this.player.resetToAddress();
     this.swingMeter.reset();
     this.state = GAME_STATES.AIMING;
-    this.camera.setTarget(tee.x, tee.y);
   }
 
   update() {
@@ -221,7 +225,7 @@ export class Game {
     // 2. Update Sophie Player Controller
     this.player.update();
 
-    // 3. Update Ball Physics
+    // 3. Update Ball Physics & Camera Tracking
     if (this.state === GAME_STATES.BALL_IN_FLIGHT || this.ball.isRolling) {
       this.ball.update(
         (x, y) => this.sceneManager.sampleTerrainPixel(x, y),
@@ -229,24 +233,23 @@ export class Game {
         this.audioEngine
       );
 
-      // Camera smooth tracks ball during flight
-      this.camera.setTarget(this.ball.x, this.ball.y);
+      // Camera follows ball during flight
+      this.camera.setTarget(this.ball.x, this.ball.y, 0.95);
 
       // Check Flagstick / Cup Sink
       if (this.flagstick.checkBallInCup(this.ball)) {
         this.audioEngine.playCupSink();
         this.state = GAME_STATES.HOLE_COMPLETE;
-        this.hud.showBanner('HOLE IN ONE! / HOLE COMPLETE!', 'PRESS SPACE FOR NEXT HOLE', 0);
+        this.hud.showBanner('HOLE COMPLETE!', 'PRESS SPACE FOR NEXT HOLE', 0);
       }
 
       // Check if Ball Stopped Rolling
       if (!this.ball.inAir && !this.ball.isRolling && !this.ball.isHoled) {
         if (this.ball.inHazard) {
-          // Reset to previous tee/shot location
           this.hud.showBanner('WATER HAZARD!', '+1 PENALTY STROKE', 2500);
           setTimeout(() => this.resetCurrentShot(), 1200);
         } else {
-          // Ball stopped on turf -> Move Sophie up to ball for next shot!
+          // Ball stopped on turf -> Move Sophie up to ball for next shot
           this.player.setPosition(this.ball.x - 12, this.ball.y);
           const pin = this.sceneManager.getPinPosition();
           this.aimAngle = Math.atan2(pin.y - this.ball.y, pin.x - this.ball.x);
@@ -255,7 +258,6 @@ export class Game {
           this.swingMeter.reset();
           this.state = GAME_STATES.AIMING;
 
-          // Auto select Putter if on Green!
           if (this.ball.currentTerrain.id === 'GREEN') {
             this.clubManager.selectClubById('PUTTER');
             this.hud.updateClubInfo(this.clubManager.getCurrentClub());
@@ -263,7 +265,12 @@ export class Game {
         }
       }
     } else if (this.state === GAME_STATES.AIMING) {
-      this.camera.setTarget(this.ball.x, this.ball.y);
+      // Smart camera framing: keeps both player & landing target point centered
+      const club = this.clubManager.getCurrentClub();
+      const targetDist = club.maxDistance * 2.2;
+      const targetX = this.ball.x + Math.cos(this.aimAngle) * targetDist;
+      const targetY = this.ball.y + Math.sin(this.aimAngle) * targetDist;
+      this.camera.setAimTarget(this.ball.x, this.ball.y, targetX, targetY);
     }
 
     // 4. Update Camera Panning
@@ -286,7 +293,7 @@ export class Game {
     // 2. Render Flagstick Pin & Hole Cup
     this.flagstick.render(this.ctx);
 
-    // 3. Render Aim Target Line (When Aiming)
+    // 3. Render Aim Target Line & Landing Circle (When Aiming)
     if (this.state === GAME_STATES.AIMING) {
       const club = this.clubManager.getCurrentClub();
       const targetDist = club.maxDistance * 2.2;
@@ -294,9 +301,9 @@ export class Game {
       const targetY = this.ball.y + Math.sin(this.aimAngle) * targetDist;
 
       // Dashed Aim Vector
-      this.ctx.strokeStyle = 'rgba(255, 235, 59, 0.75)';
-      this.ctx.lineWidth = 1.5;
-      this.ctx.setLineDash([4, 4]);
+      this.ctx.strokeStyle = 'rgba(255, 235, 59, 0.85)';
+      this.ctx.lineWidth = 2;
+      this.ctx.setLineDash([6, 6]);
       this.ctx.beginPath();
       this.ctx.moveTo(this.ball.x, this.ball.y);
       this.ctx.lineTo(targetX, targetY);
@@ -305,10 +312,13 @@ export class Game {
 
       // Landing Target Circle
       this.ctx.strokeStyle = '#00e676';
-      this.ctx.lineWidth = 2;
+      this.ctx.lineWidth = 2.5;
       this.ctx.beginPath();
-      this.ctx.arc(targetX, targetY, 12, 0, Math.PI * 2);
+      this.ctx.arc(targetX, targetY, 14, 0, Math.PI * 2);
       this.ctx.stroke();
+
+      this.ctx.fillStyle = 'rgba(0, 230, 118, 0.25)';
+      this.ctx.fill();
     }
 
     // 4. Render Sophie Player Character Sprite

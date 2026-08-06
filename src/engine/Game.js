@@ -7,13 +7,13 @@ import { BallPhysics } from '../entities/BallPhysics.js';
 import { Flagstick } from '../entities/Flagstick.js';
 import { ClubManager } from '../mechanics/Clubs.js';
 import { SwingMeter, SWING_STATES } from '../mechanics/SwingMeter.js';
+import { SwingOverlay } from '../ui/SwingOverlay.js';
 import { HUD } from '../ui/HUD.js';
 
 export const GAME_STATES = {
-  AIMING: 'AIMING',
-  SWINGING: 'SWINGING',
-  BALL_IN_FLIGHT: 'BALL_IN_FLIGHT',
-  BALL_STOPPED: 'BALL_STOPPED',
+  STRATEGY_AIM: 'STRATEGY_AIM',
+  SWING_STAGE: 'SWING_STAGE',
+  BALL_FLIGHT: 'BALL_FLIGHT',
   HOLE_COMPLETE: 'HOLE_COMPLETE'
 };
 
@@ -23,17 +23,20 @@ export class Game {
     this.ctx = this.canvas.getContext('2d');
     this.ctx.imageSmoothingEnabled = false;
 
-    // Canvas resolution setup (800x600 widescreen retro ratio)
-    this.canvas.width = 800;
-    this.canvas.height = 600;
+    // Full-Screen Top-Down Canvas Setup (960x720 ratio)
+    this.canvas.width = 960;
+    this.canvas.height = 720;
 
     // Core Systems
     this.assetLoader = new AssetLoader();
     this.sceneManager = null;
-    this.camera = new Camera(800, 600);
+    this.camera = new Camera(960, 720);
     this.audioEngine = new AudioEngine();
     this.clubManager = new ClubManager();
     this.swingMeter = new SwingMeter();
+
+    // Side-View Swing Overlay Modal
+    this.swingOverlay = null;
 
     // Entities
     this.player = new PlayerController();
@@ -44,7 +47,7 @@ export class Game {
     this.hud = null;
 
     // Game state
-    this.state = GAME_STATES.AIMING;
+    this.state = GAME_STATES.STRATEGY_AIM;
     this.wind = { speed: 6, dirAngle: 45 };
 
     // Shot aim properties
@@ -55,16 +58,17 @@ export class Game {
     // 1. Load assets
     await this.assetLoader.loadAllAssets();
 
-    // 2. Initialize Scene Manager & HUD
+    // 2. Initialize Managers & UI
     this.sceneManager = new SceneManager(this.assetLoader);
     this.hud = new HUD(this);
+    this.swingOverlay = new SwingOverlay(this);
 
     // 3. Setup Swing Meter Callbacks (Links LS 98 Style 3-Click)
     this.swingMeter.onStateChange = (meterState) => {
       this.audioEngine.playMenuBeep();
       if (meterState === SWING_STATES.POWER_GAUGE) {
+        // Trigger Sophie Backswing animation start in Side-View Overlay!
         this.player.startSwingAnimation();
-        this.state = GAME_STATES.SWINGING;
       }
     };
 
@@ -74,16 +78,18 @@ export class Game {
 
     // 4. Setup Player Impact Callback
     this.player.onImpactFrame = () => {
+      // Triggered at exact impact frame of Sophie's swing!
       this.audioEngine.playImpactSnap();
       this.audioEngine.playSwingWhoosh();
 
       const club = this.clubManager.getCurrentClub();
       const shot = this.pendingShot || { power: 1.0, snap: 0.0, isPerfect: true };
 
+      // Launch Ball Physics on Top-Down Map
       this.ball.launch(shot.power, this.aimAngle, club, shot.snap, this.wind);
       this.sceneManager.recordStroke();
-      this.state = GAME_STATES.BALL_IN_FLIGHT;
 
+      // Show accuracy result popup
       if (shot.isPerfect) {
         this.hud.showShotPopup('PERFECT SNAP!!');
       } else if (shot.snap < -0.2) {
@@ -93,6 +99,12 @@ export class Game {
       } else {
         this.hud.showShotPopup('GOOD HIT!');
       }
+
+      // Close Side-View Swing Overlay and transition back to Top-Down Map Flight!
+      setTimeout(() => {
+        this.closeSwingOverlay();
+        this.state = GAME_STATES.BALL_FLIGHT;
+      }, 350);
     };
 
     // 5. Register Inputs
@@ -120,6 +132,10 @@ export class Game {
         this.changeClub(1);
       } else if (e.code === 'KeyM') {
         this.toggleFullOverview();
+      } else if (e.code === 'Escape') {
+        if (this.state === GAME_STATES.SWING_STAGE) {
+          this.closeSwingOverlay();
+        }
       } else if (e.code === 'KeyR') {
         this.resetCurrentShot();
       } else if (e.code.startsWith('Digit')) {
@@ -128,17 +144,51 @@ export class Game {
       }
     });
 
-    this.canvas.addEventListener('mousedown', (e) => {
-      if (this.state === GAME_STATES.AIMING || this.state === GAME_STATES.SWINGING) {
-        this.handleActionTrigger();
+    // Canvas click
+    this.canvas.addEventListener('mousedown', () => {
+      if (this.state === GAME_STATES.STRATEGY_AIM) {
+        this.openSwingOverlay();
       }
     });
+
+    // Side View Modal Canvas click
+    const swingCanvas = document.getElementById('swing-canvas');
+    if (swingCanvas) {
+      swingCanvas.addEventListener('mousedown', () => {
+        if (this.state === GAME_STATES.SWING_STAGE) {
+          this.swingMeter.handleClick();
+        }
+      });
+    }
+  }
+
+  openSwingOverlay() {
+    if (this.state !== GAME_STATES.STRATEGY_AIM) return;
+    this.audioEngine.init();
+    this.state = GAME_STATES.SWING_STAGE;
+    this.player.resetToAddress();
+    this.swingMeter.reset();
+    this.swingOverlay.show();
+    this.hud.showBanner('SWING STAGE', 'CLICK SPACE / TAP TO START POWER GAUGE', 2000);
+  }
+
+  closeSwingOverlay() {
+    this.swingOverlay.hide();
+    if (this.state === GAME_STATES.SWING_STAGE) {
+      this.state = GAME_STATES.STRATEGY_AIM;
+    }
   }
 
   handleActionTrigger() {
     this.audioEngine.init();
 
-    if (this.state === GAME_STATES.AIMING || this.state === GAME_STATES.SWINGING) {
+    if (this.state === GAME_STATES.STRATEGY_AIM) {
+      // Transition from Top-Down Strategy View to Side-View Swing Overlay!
+      this.openSwingOverlay();
+      // Instantly trigger Click 1 to start power meter!
+      this.swingMeter.handleClick();
+    } else if (this.state === GAME_STATES.SWING_STAGE) {
+      // Execute 3-click meter steps inside Swing Overlay modal
       this.swingMeter.handleClick();
     } else if (this.state === GAME_STATES.HOLE_COMPLETE) {
       const nextHole = (this.sceneManager.currentHoleIndex % 9) + 1;
@@ -162,7 +212,8 @@ export class Game {
     this.player.resetToAddress();
 
     this.swingMeter.reset();
-    this.state = GAME_STATES.AIMING;
+    this.closeSwingOverlay();
+    this.state = GAME_STATES.STRATEGY_AIM;
 
     this.wind = {
       speed: Math.floor(Math.random() * 10) + 2,
@@ -183,13 +234,13 @@ export class Game {
   }
 
   adjustAim(deltaAngle) {
-    if (this.state !== GAME_STATES.AIMING) return;
+    if (this.state !== GAME_STATES.STRATEGY_AIM) return;
     this.aimAngle += deltaAngle;
     this.player.setAimAngle(this.aimAngle);
   }
 
   changeClub(dir) {
-    if (this.state !== GAME_STATES.AIMING) return;
+    if (this.state !== GAME_STATES.STRATEGY_AIM) return;
     const club = dir > 0 ? this.clubManager.nextClub() : this.clubManager.prevClub();
     this.hud.updateClubInfo(club);
     this.audioEngine.playMenuBeep();
@@ -205,41 +256,50 @@ export class Game {
     this.player.setPosition(tee.x - 12, tee.y);
     this.player.resetToAddress();
     this.swingMeter.reset();
-    this.state = GAME_STATES.AIMING;
+    this.closeSwingOverlay();
+    this.state = GAME_STATES.STRATEGY_AIM;
   }
 
   update() {
-    this.swingMeter.update();
-    this.hud.updateSwingMeter(this.swingMeter);
-    this.player.update();
+    // 1. Update Swing Meter & Side-View Modal UI if active
+    if (this.state === GAME_STATES.SWING_STAGE) {
+      this.swingMeter.update();
+      this.swingOverlay.updateMeterUI(this.swingMeter);
+      this.player.update(); // Updates Sophie's swing frames
+    }
 
-    if (this.state === GAME_STATES.BALL_IN_FLIGHT || this.ball.isRolling) {
+    // 2. Update Ball Physics & Camera Tracking during Flight on Top-Down Map
+    if (this.state === GAME_STATES.BALL_FLIGHT || this.ball.isRolling) {
       this.ball.update(
         (x, y) => this.sceneManager.sampleTerrainPixel(x, y),
         this.wind,
         this.audioEngine
       );
 
+      // Camera smoothly follows ball in flight down top-down map
       this.camera.setTarget(this.ball.x, this.ball.y, 0.95);
 
+      // Check Flagstick / Cup Sink
       if (this.flagstick.checkBallInCup(this.ball)) {
         this.audioEngine.playCupSink();
         this.state = GAME_STATES.HOLE_COMPLETE;
         this.hud.showBanner('HOLE COMPLETE!', 'PRESS SPACE FOR NEXT HOLE', 0);
       }
 
+      // Check if Ball Stopped Rolling
       if (!this.ball.inAir && !this.ball.isRolling && !this.ball.isHoled) {
         if (this.ball.inHazard) {
           this.hud.showBanner('WATER HAZARD!', '+1 PENALTY STROKE', 2500);
           setTimeout(() => this.resetCurrentShot(), 1200);
         } else {
+          // Ball stopped on turf -> Position for next shot
           this.player.setPosition(this.ball.x - 12, this.ball.y);
           const pin = this.sceneManager.getPinPosition();
           this.aimAngle = Math.atan2(pin.y - this.ball.y, pin.x - this.ball.x);
           this.player.setAimAngle(this.aimAngle);
           this.player.resetToAddress();
           this.swingMeter.reset();
-          this.state = GAME_STATES.AIMING;
+          this.state = GAME_STATES.STRATEGY_AIM;
 
           if (this.ball.currentTerrain.id === 'GREEN') {
             this.clubManager.selectClubById('PUTTER');
@@ -247,7 +307,8 @@ export class Game {
           }
         }
       }
-    } else if (this.state === GAME_STATES.AIMING) {
+    } else if (this.state === GAME_STATES.STRATEGY_AIM) {
+      // Smart camera framing: keeps both player & landing target point centered
       const club = this.clubManager.getCurrentClub();
       const targetDist = club.maxDistance * 2.2;
       const targetX = this.ball.x + Math.cos(this.aimAngle) * targetDist;
@@ -255,8 +316,10 @@ export class Game {
       this.camera.setAimTarget(this.ball.x, this.ball.y, targetX, targetY);
     }
 
+    // 3. Update Camera Panning
     this.camera.update();
 
+    // 4. Update HUD Distance readout
     const distMeters = this.sceneManager.calculateDistanceToPinInMeters(this.ball.x, this.ball.y);
     this.hud.updateHoleInfo(this.sceneManager.currentMetadata, distMeters, this.sceneManager.getScoreSummary());
   }
@@ -264,12 +327,17 @@ export class Game {
   render() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
+    // Apply 2D Camera Transform for Top-Down Strategy View
     this.camera.applyTransform(this.ctx);
 
+    // 1. Render Full-Screen Top-Down Golf Hole Map
     this.sceneManager.renderMap(this.ctx);
+
+    // 2. Render Flagstick Pin & Hole Cup
     this.flagstick.render(this.ctx);
 
-    if (this.state === GAME_STATES.AIMING) {
+    // 3. Render Aim Target Line & Landing Circle (When Aiming on Top-Down Map)
+    if (this.state === GAME_STATES.STRATEGY_AIM) {
       const club = this.clubManager.getCurrentClub();
       const targetDist = club.maxDistance * 2.2;
       const targetX = this.ball.x + Math.cos(this.aimAngle) * targetDist;
@@ -294,13 +362,18 @@ export class Game {
       this.ctx.fill();
     }
 
-    const spriteSheet = this.assetLoader.getSophieSpriteSheet();
-    const spriteMeta = this.assetLoader.getSpriteMetadata();
-    this.player.render(this.ctx, spriteSheet, spriteMeta);
-
+    // 4. Render Golf Ball & 3D Flight Shadow on Top-Down Map
     this.ball.render(this.ctx);
 
+    // Restore Camera Transform
     this.camera.restoreTransform(this.ctx);
+
+    // 5. Render Side-View Swing Overlay if Active (View 2 Modal)
+    if (this.state === GAME_STATES.SWING_STAGE) {
+      const spriteSheet = this.assetLoader.getSophieSpriteSheet();
+      const spriteMeta = this.assetLoader.getSpriteMetadata();
+      this.swingOverlay.render(this.player, spriteSheet, spriteMeta);
+    }
   }
 
   loop(timestamp) {

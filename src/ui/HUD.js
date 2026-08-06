@@ -1,13 +1,14 @@
 import { SWING_STATES } from '../mechanics/SwingMeter.js';
 
 /**
- * 16-Bit SNES Arcade & Links LS 98 Style HUD UI Manager for Warragul Country Club
+ * 16-Bit SNES Arcade & Links LS 98 Style HUD UI Manager
+ * Controls 2-View Workflow: Top-Down Strategy View <-> Side-View Swing Overlay Modal
  */
 export class HUD {
   constructor(game) {
     this.game = game;
 
-    // DOM Elements
+    // DOM Elements - Top Strategy Bar
     this.elHoleNum = document.getElementById('hud-hole-num');
     this.elParVal = document.getElementById('hud-par-val');
     this.elDistVal = document.getElementById('hud-dist-val');
@@ -15,14 +16,16 @@ export class HUD {
     this.elWindVal = document.getElementById('hud-wind-val');
     this.elWindArrow = document.getElementById('hud-wind-arrow');
 
+    // Controls
     this.elClubName = document.getElementById('hud-club-name');
     this.elClubDist = document.getElementById('hud-club-dist');
     this.btnClubPrev = document.getElementById('btn-club-prev');
     this.btnClubNext = document.getElementById('btn-club-next');
 
-    this.meterFill = document.getElementById('meter-power-fill');
-    this.meterCursor = document.getElementById('meter-cursor');
-    this.meterStatusText = document.getElementById('meter-status-text');
+    this.btnAimLeft = document.getElementById('btn-aim-left');
+    this.btnAimRight = document.getElementById('btn-aim-right');
+    this.btnOpenSwing = document.getElementById('btn-open-swing');
+    this.btnCloseSwing = document.getElementById('btn-close-swing');
 
     this.selectHole = document.getElementById('select-hole');
     this.btnMapToggle = document.getElementById('btn-map-toggle');
@@ -44,6 +47,17 @@ export class HUD {
   setupEventListeners() {
     this.btnClubPrev.addEventListener('click', () => this.game.changeClub(-1));
     this.btnClubNext.addEventListener('click', () => this.game.changeClub(1));
+
+    if (this.btnAimLeft) this.btnAimLeft.addEventListener('click', () => this.game.adjustAim(-0.06));
+    if (this.btnAimRight) this.btnAimRight.addEventListener('click', () => this.game.adjustAim(0.06));
+
+    if (this.btnOpenSwing) {
+      this.btnOpenSwing.addEventListener('click', () => this.game.openSwingOverlay());
+    }
+
+    if (this.btnCloseSwing) {
+      this.btnCloseSwing.addEventListener('click', () => this.game.closeSwingOverlay());
+    }
 
     this.selectHole.addEventListener('change', (e) => {
       this.game.switchHole(parseInt(e.target.value, 10));
@@ -91,23 +105,6 @@ export class HUD {
   updateClubInfo(club) {
     if (this.elClubName) this.elClubName.innerText = club.name;
     if (this.elClubDist) this.elClubDist.innerText = `${club.maxDistance}m`;
-  }
-
-  updateSwingMeter(meter) {
-    const pos = meter.cursorPos;
-    if (this.meterCursor) {
-      this.meterCursor.style.left = `${pos}%`;
-    }
-
-    if (meter.state === SWING_STATES.POWER_GAUGE) {
-      if (this.meterFill) this.meterFill.style.width = `${pos}%`;
-      if (this.meterStatusText) this.meterStatusText.innerText = `CLICK SPACE: SET POWER (${Math.round(pos)}%)`;
-    } else if (meter.state === SWING_STATES.SNAP_GAUGE) {
-      if (this.meterStatusText) this.meterStatusText.innerText = 'CLICK SPACE: SNAP AT 0% BASELINE!';
-    } else if (meter.state === SWING_STATES.IDLE) {
-      if (this.meterFill) this.meterFill.style.width = '0%';
-      if (this.meterStatusText) this.meterStatusText.innerText = 'PRESS SPACE / CLICK TO START 3-CLICK SWING';
-    }
   }
 
   showBanner(title, subtitle, duration = 3000) {

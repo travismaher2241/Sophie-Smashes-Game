@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Sophie Smashes Golf 16-Bit - Warragul Country Club</title>
-  <meta name="description" content="A 16-bit SNES inspired retro arcade golf game featuring Links LS 98 3-click swing mechanics at Warragul Country Club.">
+  <meta name="description" content="A 16-bit Hybrid Arcade Golf Game featuring Top-Down Strategy View and Side-View Swing Overlay at Warragul Country Club.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
@@ -12,42 +12,43 @@
 </head>
 <body>
   <div id="app" class="retro-container">
-    <!-- Top HUD Bar -->
-    <header id="hud-header" class="snes-hud-top">
-      <div class="hud-item hole-badge">
-        <span class="hud-label">HOLE</span>
-        <span id="hud-hole-num" class="hud-value">1</span>
-      </div>
-      <div class="hud-item par-badge">
-        <span class="hud-label">PAR</span>
-        <span id="hud-par-val" class="hud-value">4</span>
-      </div>
-      <div class="hud-item dist-badge">
-        <span class="hud-label">DISTANCE</span>
-        <span id="hud-dist-val" class="hud-value">307m</span>
-      </div>
-      <div class="hud-item score-badge">
-        <span class="hud-label">SCORE</span>
-        <span id="hud-score-val" class="hud-value">EVEN</span>
-      </div>
-      <div class="hud-item wind-badge">
-        <span class="hud-label">WIND</span>
-        <div id="hud-wind-container">
-          <span id="hud-wind-arrow">↑</span>
-          <span id="hud-wind-val" class="hud-value">8 MPH</span>
-        </div>
-      </div>
-    </header>
-
-    <!-- Canvas Frame Container with CRT Overlay -->
+    
+    <!-- VIEW 1: TOP-DOWN STRATEGY VIEW (Full Screen Canvas Area) -->
     <div id="game-view" class="game-viewport">
-      <canvas id="game-canvas" width="800" height="600"></canvas>
+      <canvas id="game-canvas" width="960" height="720"></canvas>
       <div id="crt-overlay" class="crt-filter"></div>
-      
-      <!-- In-Game Arcade Overlay Alerts -->
+
+      <!-- Top Overlay HUD Bar -->
+      <header id="hud-header" class="snes-hud-top overlay-hud-top">
+        <div class="hud-item hole-badge">
+          <span class="hud-label">HOLE</span>
+          <span id="hud-hole-num" class="hud-value">1</span>
+        </div>
+        <div class="hud-item par-badge">
+          <span class="hud-label">PAR</span>
+          <span id="hud-par-val" class="hud-value">4</span>
+        </div>
+        <div class="hud-item dist-badge">
+          <span class="hud-label">DISTANCE</span>
+          <span id="hud-dist-val" class="hud-value">307m</span>
+        </div>
+        <div class="hud-item score-badge">
+          <span class="hud-label">SCORE</span>
+          <span id="hud-score-val" class="hud-value">EVEN</span>
+        </div>
+        <div class="hud-item wind-badge">
+          <span class="hud-label">WIND</span>
+          <div id="hud-wind-container">
+            <span id="hud-wind-arrow">↑</span>
+            <span id="hud-wind-val" class="hud-value">8 MPH</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- In-Game Arcade Overlay Banner -->
       <div id="game-banner" class="game-banner hidden">
         <div id="banner-text" class="banner-title">HOLE 1: WARRAGUL COUNTRY CLUB</div>
-        <div id="banner-subtext" class="banner-subtitle">PAR 4 - 307m</div>
+        <div id="banner-subtext" class="banner-subtitle">AIM YOUR SHOT & SELECT CLUB</div>
       </div>
 
       <!-- Shot Result Popup -->
@@ -56,8 +57,8 @@
       </div>
     </div>
 
-    <!-- Bottom Control & Links LS 98 Swing Gauge HUD -->
-    <footer id="hud-footer" class="snes-hud-bottom">
+    <!-- Bottom Strategy Controls Bar (Aim & Club Selection) -->
+    <footer id="hud-footer" class="snes-hud-bottom strategy-hud-bottom">
       <div class="hud-control-group club-select-box">
         <button id="btn-club-prev" class="retro-btn" title="Previous Club (Up Key)">▲</button>
         <div class="club-display">
@@ -68,24 +69,18 @@
         <button id="btn-club-next" class="retro-btn" title="Next Club (Down Key)">▼</button>
       </div>
 
-      <!-- Links LS 98 Authentic 3-Click Swing Power & Baseline Snap Meter -->
-      <div class="swing-meter-container">
-        <div class="meter-labels">
-          <span class="text-green">SNAP (0%)</span>
-          <span>POWER 50%</span>
-          <span class="text-gold">100% POWER</span>
-        </div>
-        <div id="meter-bar-track" class="meter-bar-track">
-          <div id="meter-sweet-spot" class="meter-sweet-spot"></div>
-          <div id="meter-power-fill" class="meter-power-fill"></div>
-          <div id="meter-cursor" class="meter-cursor"></div>
-        </div>
-        <div class="meter-action-hint">
-          <span id="meter-status-text">CLICK SPACE: START SWING</span>
-        </div>
+      <!-- Aim Direction Controls -->
+      <div class="aim-controls">
+        <button id="btn-aim-left" class="retro-btn btn-large" title="Aim Left (Left Arrow)">◀ AIM LEFT</button>
+        <button id="btn-aim-right" class="retro-btn btn-large" title="Aim Right (Right Arrow)">AIM RIGHT ▶</button>
       </div>
 
-      <!-- Action Buttons & Hole Selector -->
+      <!-- SWING / READY BUTTON (Triggers Side-View Swing Overlay) -->
+      <div class="swing-trigger-box">
+        <button id="btn-open-swing" class="retro-btn btn-swing-highlight">SWING [SPACEBAR]</button>
+      </div>
+
+      <!-- Option Buttons & Hole Selector -->
       <div class="hud-control-group action-controls">
         <div class="hole-selector">
           <span class="hud-label">WARRAGUL CC</span>
@@ -109,6 +104,39 @@
         </div>
       </div>
     </footer>
+
+    <!-- VIEW 2: SIDE-VIEW SWING OVERLAY (Pop-Up Swing Stage) -->
+    <div id="swing-modal" class="swing-modal-overlay hidden">
+      <div class="swing-modal-container">
+        <div class="modal-header">
+          <span class="modal-title">SOPHIE SMASHES SWING STAGE</span>
+          <button id="btn-close-swing" class="retro-btn btn-close-modal" title="Return to Strategy View">BACK TO MAP [ESC]</button>
+        </div>
+        
+        <!-- Side View Stage Canvas -->
+        <div class="modal-stage-wrapper">
+          <canvas id="swing-canvas" width="640" height="360"></canvas>
+        </div>
+
+        <!-- Links LS 98 3-Click Swing Power & Snap Gauge inside Modal -->
+        <div class="modal-swing-meter-container">
+          <div class="meter-labels">
+            <span class="text-green">SNAP (0%)</span>
+            <span>POWER 50%</span>
+            <span class="text-gold">100% POWER</span>
+          </div>
+          <div id="modal-meter-bar-track" class="meter-bar-track">
+            <div id="modal-meter-sweet-spot" class="meter-sweet-spot"></div>
+            <div id="modal-meter-fill" class="meter-power-fill"></div>
+            <div id="modal-meter-cursor" class="meter-cursor"></div>
+          </div>
+          <div class="meter-action-hint">
+            <span id="modal-status-text">CLICK SPACE / TAP TO START POWER GAUGE</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <script type="module" src="./src/main.js"></script>

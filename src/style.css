@@ -1,9 +1,9 @@
-/* 16-Bit Retro SNES Palette & Reset */
+/* 16-Bit Retro SNES & Hybrid 2-View Golf Game Palette & Reset */
 :root {
-  --bg-dark: #0a0b10;
-  --panel-bg: #141824;
+  --bg-dark: #07090e;
+  --panel-bg: #121624;
   --panel-border: #3b4668;
-  --panel-light: #252e48;
+  --panel-light: #222b44;
   
   --snes-gold: #ffcc00;
   --snes-gold-dark: #cc9900;
@@ -44,79 +44,20 @@ html, body {
 /* Main Container Frame */
 .retro-container {
   width: 100vw;
-  max-width: 1000px;
+  max-width: 1100px;
   height: 100vh;
-  max-height: 820px;
+  max-height: 860px;
   background: var(--panel-bg);
   border: 4px solid var(--panel-border);
   border-radius: 8px;
-  box-shadow: 0 0 35px rgba(0, 0, 0, 0.95), inset 0 0 10px rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 35px rgba(0, 0, 0, 0.95);
   display: flex;
   flex-direction: column;
   position: relative;
   overflow: hidden;
 }
 
-/* Top SNES HUD Bar */
-.snes-hud-top {
-  height: 52px;
-  background: linear-gradient(180deg, #1e263d 0%, #121727 100%);
-  border-bottom: 3px solid var(--panel-border);
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  padding: 0 12px;
-  gap: 8px;
-  z-index: 10;
-}
-
-.hud-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.4);
-  padding: 4px 10px;
-  border-radius: 4px;
-  border: 1.5px solid rgba(255, 255, 255, 0.1);
-  min-width: 76px;
-}
-
-.hud-label {
-  font-size: 8px;
-  color: var(--text-muted);
-  letter-spacing: 1px;
-  margin-bottom: 2px;
-}
-
-.hud-value {
-  font-size: 13px;
-  font-family: var(--font-arcade);
-  color: var(--snes-gold);
-  font-weight: bold;
-  letter-spacing: 1px;
-}
-
-.hud-subvalue {
-  font-size: 9px;
-  font-family: var(--font-arcade);
-  color: var(--snes-green);
-}
-
-#hud-wind-container {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-#hud-wind-arrow {
-  color: var(--snes-blue);
-  font-size: 14px;
-  font-weight: bold;
-  transition: transform 0.3s ease;
-}
-
-/* Game Viewport and Canvas */
+/* VIEW 1: TOP-DOWN STRATEGY VIEW (Full Canvas Area) */
 .game-viewport {
   flex: 1;
   position: relative;
@@ -130,15 +71,14 @@ html, body {
 #game-canvas {
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  /* CRISP 16-bit Pixel Rendering */
+  object-fit: cover; /* Maximizes top-down map fill */
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   image-rendering: -moz-crisp-edges;
   display: block;
 }
 
-/* CRT Scanline Filter */
+/* CRT Overlay Filter */
 .crt-filter {
   position: absolute;
   top: 0;
@@ -148,16 +88,15 @@ html, body {
   pointer-events: none;
   background: linear-gradient(
     rgba(18, 16, 16, 0) 50%, 
-    rgba(0, 0, 0, 0.22) 50%
+    rgba(0, 0, 0, 0.20) 50%
   ), linear-gradient(
     90deg,
-    rgba(255, 0, 0, 0.03),
+    rgba(255, 0, 0, 0.02),
     rgba(0, 255, 0, 0.01),
-    rgba(0, 0, 255, 0.03)
+    rgba(0, 0, 255, 0.02)
   );
   background-size: 100% 4px, 6px 100%;
   opacity: 0.9;
-  transition: opacity 0.2s ease;
   z-index: 5;
 }
 
@@ -165,20 +104,83 @@ html, body {
   opacity: 0;
 }
 
+/* Top Translucent Floating HUD Overlay */
+.overlay-hud-top {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 24px);
+  max-width: 900px;
+  height: 48px;
+  background: rgba(10, 14, 26, 0.82);
+  backdrop-filter: blur(4px);
+  border: 2px solid var(--panel-border);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 10px;
+  z-index: 6;
+}
+
+.hud-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  min-width: 70px;
+}
+
+.hud-label {
+  font-size: 7.5px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  margin-bottom: 2px;
+}
+
+.hud-value {
+  font-size: 12px;
+  font-family: var(--font-arcade);
+  color: var(--snes-gold);
+  font-weight: bold;
+}
+
+.hud-subvalue {
+  font-size: 8.5px;
+  font-family: var(--font-arcade);
+  color: var(--snes-green);
+}
+
+#hud-wind-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+#hud-wind-arrow {
+  color: var(--snes-blue);
+  font-size: 13px;
+  transition: transform 0.3s ease;
+}
+
 /* In-Game Banner Alert */
 .game-banner {
   position: absolute;
-  top: 20px;
+  top: 68px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(10, 14, 26, 0.88);
-  border: 3px solid var(--snes-gold);
+  background: rgba(10, 14, 26, 0.90);
+  border: 2px solid var(--snes-gold);
   border-radius: 6px;
-  padding: 10px 24px;
+  padding: 8px 20px;
   text-align: center;
   box-shadow: 0 4px 20px rgba(0,0,0,0.8);
-  z-index: 8;
-  transition: opacity 0.3s ease;
+  z-index: 6;
 }
 
 .game-banner.hidden {
@@ -187,16 +189,15 @@ html, body {
 }
 
 .banner-title {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--snes-gold);
   text-shadow: 2px 2px 0 #000;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .banner-subtitle {
-  font-size: 9px;
+  font-size: 8.5px;
   color: #ffffff;
-  letter-spacing: 0.5px;
 }
 
 /* Shot Result Popup */
@@ -204,7 +205,7 @@ html, body {
   position: absolute;
   top: 45%;
   left: 50%;
-  transform: translate(-50%, -50%) scale(1);
+  transform: translate(-50%, -50%);
   background: rgba(0, 0, 0, 0.88);
   border: 3px solid var(--snes-green);
   color: var(--snes-green);
@@ -212,78 +213,169 @@ html, body {
   font-size: 16px;
   border-radius: 6px;
   box-shadow: 0 0 25px rgba(0, 230, 118, 0.6);
-  z-index: 9;
-  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  z-index: 7;
 }
 
 .shot-popup.hidden {
   display: none;
 }
 
-@keyframes popIn {
-  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
-  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-}
-
-/* Bottom SNES HUD & Controls */
-.snes-hud-bottom {
+/* Bottom Strategy Controls Bar */
+.strategy-hud-bottom {
   background: linear-gradient(180deg, #141a2c 0%, #0d111d 100%);
   border-top: 3px solid var(--panel-border);
-  padding: 10px 16px;
+  padding: 10px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  z-index: 10;
+  gap: 10px;
+  z-index: 6;
 }
 
-.hud-control-group {
+.aim-controls {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  gap: 6px;
+}
+
+.btn-large {
+  padding: 8px 12px;
+  font-size: 9px;
+}
+
+/* Glowing SWING / READY Button */
+.btn-swing-highlight {
+  background: linear-gradient(180deg, #00e676 0%, #00994d 100%);
+  color: #000000;
+  border: 2px solid #69f0ae;
+  border-radius: 6px;
+  padding: 10px 22px;
+  font-family: var(--font-retro);
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 0 15px rgba(0, 230, 118, 0.7);
+  animation: pulseGlow 1.8s infinite alternate;
+}
+
+@keyframes pulseGlow {
+  0% { box-shadow: 0 0 10px rgba(0, 230, 118, 0.5); transform: scale(1); }
+  100% { box-shadow: 0 0 22px rgba(0, 230, 118, 0.95); transform: scale(1.03); }
+}
+
+.btn-swing-highlight:hover {
+  background: linear-gradient(180deg, #69f0ae 0%, #00e676 100%);
 }
 
 .club-select-box {
   background: rgba(0, 0, 0, 0.4);
-  padding: 6px 10px;
+  padding: 6px 8px;
   border-radius: 6px;
   border: 1.5px solid var(--panel-border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .club-display {
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 90px;
+  min-width: 85px;
 }
 
-.text-gold { color: var(--snes-gold) !important; }
-.text-green { color: var(--snes-green) !important; }
+/* VIEW 2: SIDE-VIEW SWING OVERLAY MODAL */
+.swing-modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(4, 6, 12, 0.88);
+  backdrop-filter: blur(6px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 20;
+  transition: opacity 0.25s ease;
+}
 
-/* Links LS 98 Style 3-Click Swing Gauge */
-.swing-meter-container {
-  flex: 1;
-  max-width: 420px;
-  background: rgba(0, 0, 0, 0.55);
-  border: 2px solid var(--panel-border);
-  border-radius: 6px;
-  padding: 6px 12px;
+.swing-modal-overlay.hidden {
+  display: none;
+  pointer-events: none;
+}
+
+.swing-modal-container {
+  width: 90%;
+  max-width: 720px;
+  background: var(--panel-bg);
+  border: 4px solid var(--snes-gold);
+  border-radius: 8px;
+  box-shadow: 0 0 40px rgba(255, 204, 0, 0.35);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  overflow: hidden;
+}
+
+.modal-header {
+  height: 40px;
+  background: linear-gradient(180deg, #242d48 0%, #161c2e 100%);
+  border-bottom: 2px solid var(--panel-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+}
+
+.modal-title {
+  font-size: 11px;
+  color: var(--snes-gold);
+  text-shadow: 1px 1px 0 #000;
+}
+
+.btn-close-modal {
+  padding: 4px 8px;
+  font-size: 8px;
+}
+
+.modal-stage-wrapper {
+  width: 100%;
+  height: 340px;
+  background: #000000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+#swing-canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* Links LS 98 Swing Gauge inside Modal */
+.modal-swing-meter-container {
+  background: #0d111c;
+  border-top: 2px solid var(--panel-border);
+  padding: 10px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .meter-labels {
   display: flex;
   justify-content: space-between;
-  font-size: 7.5px;
+  font-size: 8px;
   color: var(--text-muted);
   font-weight: bold;
 }
 
 .meter-bar-track {
   width: 100%;
-  height: 20px;
+  height: 22px;
   background: #101420;
   border: 2px solid #334060;
   border-radius: 3px;
@@ -291,7 +383,6 @@ html, body {
   overflow: hidden;
 }
 
-/* Links LS 98 Baseline Sweet Spot at 0% Baseline */
 .meter-sweet-spot {
   position: absolute;
   top: 0;
@@ -310,7 +401,6 @@ html, body {
   left: 0;
   width: 0%;
   background: linear-gradient(90deg, var(--snes-green) 0%, var(--snes-blue) 60%, var(--snes-gold) 85%, var(--snes-red) 100%);
-  transition: none;
 }
 
 .meter-cursor {
@@ -328,11 +418,10 @@ html, body {
 
 .meter-action-hint {
   text-align: center;
-  font-size: 8.5px;
+  font-size: 9px;
   color: var(--snes-gold);
 }
 
-/* Retro Buttons & Dropdowns */
 .retro-btn {
   background: linear-gradient(180deg, #3a476a 0%, #242e47 100%);
   color: #ffffff;
@@ -351,11 +440,6 @@ html, body {
   border-color: var(--snes-gold);
 }
 
-.retro-btn:active {
-  transform: translateY(2px);
-  box-shadow: 0 1px 0 #131929;
-}
-
 .retro-btn.btn-small {
   padding: 4px 7px;
   font-size: 8px;
@@ -369,7 +453,7 @@ html, body {
 .action-controls {
   flex-direction: column;
   align-items: flex-end;
-  gap: 6px;
+  gap: 4px;
 }
 
 .hole-selector {
@@ -395,29 +479,18 @@ html, body {
   gap: 4px;
 }
 
-/* Responsive adjustments */
-@media (max-width: 720px) {
-  .snes-hud-top {
-    height: 44px;
-    padding: 0 4px;
+@media (max-width: 768px) {
+  .strategy-hud-bottom {
+    flex-wrap: wrap;
   }
-  .hud-item {
-    padding: 2px 4px;
-    min-width: 55px;
+  .aim-controls {
+    order: 1;
   }
-  .hud-value { font-size: 11px; }
-  .snes-hud-bottom {
-    flex-direction: column;
-    padding: 6px 10px;
-    gap: 8px;
-  }
-  .swing-meter-container {
+  .swing-trigger-box {
+    order: 2;
     width: 100%;
-    max-width: none;
   }
-  .action-controls {
-    flex-direction: row;
+  .btn-swing-highlight {
     width: 100%;
-    justify-content: space-between;
   }
 }

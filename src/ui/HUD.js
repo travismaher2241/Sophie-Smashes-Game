@@ -2,12 +2,16 @@ import { SWING_STATES } from '../mechanics/SwingMeter.js';
 
 /**
  * 16-Bit SNES Arcade & Links LS 98 Style HUD UI Manager
- * Controls 2-View Workflow: Top-Down Strategy View <-> Side-View Swing Overlay Modal
- * Handles 14-Club Bag Selection & Shot Modes (Full, Pitch, Chip, Flop).
+ * Controls Welcome / Start Title Page <-> Top-Down Strategy View <-> Side-View Swing Overlay
  */
 export class HUD {
   constructor(game) {
     this.game = game;
+
+    // Welcome / Start Title Screen
+    this.titleScreen = document.getElementById('title-screen');
+    this.btnStartGame = document.getElementById('btn-start-game');
+    this.btnTitleReturn = document.getElementById('btn-title-return');
 
     // DOM Elements - Top Strategy Bar
     this.elHoleNum = document.getElementById('hud-hole-num');
@@ -51,6 +55,18 @@ export class HUD {
   }
 
   setupEventListeners() {
+    if (this.btnStartGame) {
+      this.btnStartGame.addEventListener('click', () => {
+        this.game.startGameFromTitle();
+      });
+    }
+
+    if (this.btnTitleReturn) {
+      this.btnTitleReturn.addEventListener('click', () => {
+        this.game.showTitleScreen();
+      });
+    }
+
     this.btnClubPrev.addEventListener('click', () => this.game.changeClub(-1));
     this.btnClubNext.addEventListener('click', () => this.game.changeClub(1));
 
@@ -94,6 +110,14 @@ export class HUD {
     this.btnResetShot.addEventListener('click', () => {
       this.game.resetCurrentShot();
     });
+  }
+
+  showTitleOverlay() {
+    if (this.titleScreen) this.titleScreen.classList.remove('hidden');
+  }
+
+  hideTitleOverlay() {
+    if (this.titleScreen) this.titleScreen.classList.add('hidden');
   }
 
   updateHoleInfo(meta, distanceMeters, scoreText) {

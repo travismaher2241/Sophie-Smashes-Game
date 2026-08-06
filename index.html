@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Sophie Smashes Golf 16-Bit - Warragul Country Club</title>
-  <meta name="description" content="A 16-bit Hybrid Arcade Golf Game featuring 14 Golf Clubs, Shot Modes (Full, Pitch, Chip, Flop), and Side-View Swing Overlay at Warragul Country Club.">
+  <title>Sophie Smashes - 16-Bit Golf Engine</title>
+  <meta name="description" content="Sophie Smashes - A 16-Bit Retro Arcade Hybrid Golf Game featuring 14 Golf Clubs, 4 Shot Modes, and Warragul Country Club.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
@@ -12,6 +12,46 @@
 </head>
 <body>
   <div id="app" class="retro-container">
+
+    <!-- WELCOME / TITLE SCREEN OVERLAY -->
+    <div id="title-screen" class="title-screen-overlay">
+      <div class="title-card-container">
+        
+        <!-- Arcade Header Badge -->
+        <div class="title-header-badge">★ 16-BIT RETRO ARCADE GOLF ★</div>
+
+        <!-- Game Title Logo -->
+        <h1 class="game-logo-title">SOPHIE SMASHES</h1>
+        <div class="game-logo-subtitle">WARRAGUL COUNTRY CLUB EDITION</div>
+
+        <!-- Hero Feature Card -->
+        <div class="title-briefing-card">
+          <div class="card-column">
+            <span class="card-heading">⛳ 2-VIEW ARCHITECTURE</span>
+            <p>Full-Screen Strategy Map & Side-View 3D Swing Stage Modal</p>
+          </div>
+          <div class="card-column">
+            <span class="card-heading">🎯 3-CLICK SWING SYSTEM</span>
+            <p>Click 1: Backswing | Click 2: Power | Click 3: Baseline Snap</p>
+          </div>
+          <div class="card-column">
+            <span class="card-heading">🏌️ FULL 14-CLUB BAG</span>
+            <p>14 Clubs + Putter & 4 Shot Modes (Full, Pitch, Chip, Flop)</p>
+          </div>
+        </div>
+
+        <!-- Big Glowing Start Button -->
+        <div class="title-action-box">
+          <button id="btn-start-game" class="retro-btn btn-title-start">PRESS SPACE OR CLICK TO TEE OFF</button>
+        </div>
+
+        <!-- Controls Reference Footer -->
+        <div class="title-controls-hint">
+          <span>[SPACE] SWING / SELECT</span> • <span>[ARROWS] AIM / CLUB</span> • <span>[KEY S] SHOT MODE</span> • <span>[KEY M] FULL MAP</span>
+        </div>
+
+      </div>
+    </div>
     
     <!-- VIEW 1: TOP-DOWN STRATEGY VIEW (Full Screen Canvas Area) -->
     <div id="game-view" class="game-viewport">
@@ -112,7 +152,7 @@
           <button id="btn-map-toggle" class="retro-btn btn-small" title="Toggle Full Course Overview Mode (Key M)">FULL MAP</button>
           <button id="btn-crt-toggle" class="retro-btn btn-small active" title="Toggle CRT Filter">CRT</button>
           <button id="btn-audio-toggle" class="retro-btn btn-small active" title="Toggle Sound">SFX ON</button>
-          <button id="btn-reset-shot" class="retro-btn btn-small" title="Mulligan / Reset Shot">RESET</button>
+          <button id="btn-title-return" class="retro-btn btn-small" title="Return to Start Title Screen">TITLE</button>
         </div>
       </div>
     </footer>

@@ -12,6 +12,7 @@ import { HUD } from '../ui/HUD.js';
 import { identifyTerrainFromColor } from '../utils/TerrainTypes.js';
 
 export const GAME_STATES = {
+  TITLE_SCREEN: 'TITLE_SCREEN',
   STRATEGY_AIM: 'STRATEGY_AIM',
   SWING_STAGE: 'SWING_STAGE',
   BALL_FLIGHT: 'BALL_FLIGHT',
@@ -47,8 +48,8 @@ export class Game {
     // UI
     this.hud = null;
 
-    // Game state
-    this.state = GAME_STATES.STRATEGY_AIM;
+    // Game state (Starts on Welcome / Title Screen)
+    this.state = GAME_STATES.TITLE_SCREEN;
     this.wind = { speed: 6, dirAngle: 45 };
 
     // Shot aim properties
@@ -80,7 +81,7 @@ export class Game {
       this.player.startSwingAnimation();
     };
 
-    // 4. Setup Player Impact Callback using Calibrated Metric Map Flight Formula & Shot Mode
+    // 4. Setup Player Impact Callback
     this.player.onImpactFrame = () => {
       this.audioEngine.playImpactSnap();
       this.audioEngine.playSwingWhoosh();
@@ -144,11 +145,27 @@ export class Game {
     // 5. Register Inputs
     this.setupInputs();
 
-    // 6. Load Hole 1
+    // 6. Load Hole 1 & Show Welcome Title Screen
     this.switchHole(1);
+    this.showTitleScreen();
 
     // 7. Start Game Loop
     requestAnimationFrame((timestamp) => this.loop(timestamp));
+  }
+
+  showTitleScreen() {
+    this.state = GAME_STATES.TITLE_SCREEN;
+    if (this.hud) this.hud.showTitleOverlay();
+  }
+
+  startGameFromTitle() {
+    this.audioEngine.init();
+    this.audioEngine.playMenuBeep();
+    this.state = GAME_STATES.STRATEGY_AIM;
+    if (this.hud) {
+      this.hud.hideTitleOverlay();
+      this.hud.showBanner('WELCOME TO SOPHIE SMASHES!', 'WARRAGUL COUNTRY CLUB - HOLE 1', 3000);
+    }
   }
 
   setupInputs() {
@@ -180,7 +197,6 @@ export class Game {
       }
     });
 
-    // Touch & Mouse Drag Panning on Top-Down Strategy Canvas
     const onDragStart = (clientPos) => {
       if (this.state === GAME_STATES.STRATEGY_AIM) {
         this.isDraggingMap = true;
@@ -259,7 +275,9 @@ export class Game {
   handleActionTrigger() {
     this.audioEngine.init();
 
-    if (this.state === GAME_STATES.STRATEGY_AIM) {
+    if (this.state === GAME_STATES.TITLE_SCREEN) {
+      this.startGameFromTitle();
+    } else if (this.state === GAME_STATES.STRATEGY_AIM) {
       this.openSwingOverlay();
       this.swingMeter.handleClick();
     } else if (this.state === GAME_STATES.SWING_STAGE) {
@@ -287,7 +305,10 @@ export class Game {
 
     this.swingMeter.reset();
     this.closeSwingOverlay();
-    this.state = GAME_STATES.STRATEGY_AIM;
+    
+    if (this.state !== GAME_STATES.TITLE_SCREEN) {
+      this.state = GAME_STATES.STRATEGY_AIM;
+    }
 
     this.wind = {
       speed: Math.floor(Math.random() * 10) + 2,

@@ -9,7 +9,7 @@ import { ClubManager } from '../mechanics/Clubs.js';
 import { SwingMeter, SWING_STATES } from '../mechanics/SwingMeter.js';
 import { SwingOverlay } from '../ui/SwingOverlay.js';
 import { HUD } from '../ui/HUD.js';
-import { identifyTerrainFromColor } from '../utils/TerrainTypes.js';
+import { TERRAIN_TYPES, identifyTerrainFromColor } from '../utils/TerrainTypes.js';
 
 export const GAME_STATES = {
   TITLE_SCREEN: 'TITLE_SCREEN',
@@ -60,7 +60,7 @@ export class Game {
     this.dragStartX = 0;
     this.dragStartY = 0;
 
-    // Attach global reference so inline HTML clicks work 100% reliably!
+    // Global reference for inline HTML onclick calls
     window.gameInstance = this;
     window.startGameFromTitle = () => this.startGameFromTitle();
 
@@ -71,19 +71,14 @@ export class Game {
   }
 
   async boot() {
-    // Show title screen immediately while assets load in background
     this.showTitleScreen();
-
-    // Start background animation loop
     requestAnimationFrame((timestamp) => this.loop(timestamp));
 
-    // Load All Assets
     try {
       await this.assetLoader.loadAllAssets();
       this.sceneManager = new SceneManager(this.assetLoader);
       this.assetsLoaded = true;
 
-      // Setup Swing Meter Callbacks
       this.swingMeter.onStateChange = (meterState) => {
         this.audioEngine.playMenuBeep();
       };
@@ -93,7 +88,6 @@ export class Game {
         this.player.startSwingAnimation();
       };
 
-      // Setup Player Impact Callback
       this.player.onImpactFrame = () => {
         this.audioEngine.playImpactSnap();
         this.audioEngine.playSwingWhoosh();
@@ -154,10 +148,8 @@ export class Game {
         }, 350);
       };
 
-      // Initial Hole Load
       this.switchHole(1);
 
-      // If user clicked start button while assets were loading, start game now!
       if (this.isPendingStart) {
         this.startGameFromTitle();
       }
@@ -180,7 +172,6 @@ export class Game {
     }
 
     if (!this.assetsLoaded) {
-      // Assets still downloading in background
       this.isPendingStart = true;
       const startBtn = document.getElementById('btn-start-game');
       if (startBtn) startBtn.innerText = 'LOADING WARRAGUL COUNTRY CLUB...';
@@ -345,6 +336,10 @@ export class Game {
     this.camera.jumpTo(tee.x, tee.y, 0.85);
 
     const distMeters = this.sceneManager.calculateDistanceToPinInMeters(tee.x, tee.y);
+
+    // Auto-select optimal club & shot mode for this hole/shot!
+    this.clubManager.autoSelectBestClub(distMeters, TERRAIN_TYPES.TEE_BOX);
+
     this.hud.updateHoleInfo(meta, distMeters, this.sceneManager.getScoreSummary());
     this.hud.updateClubInfo(this.clubManager.getCurrentClub(), this.clubManager.getEffectiveDistance());
     this.hud.updateShotTypeInfo(this.clubManager.getCurrentShotType());
@@ -378,7 +373,7 @@ export class Game {
   }
 
   resetCurrentShot() {
-    if (!this.sceneManager || this.state === GAME_STATES.TITLE_SCREEN) return;
+    if (!this.sceneManager) return;
     const tee = this.sceneManager.getTeePosition();
     this.ball.setPosition(tee.x, tee.y, 0);
     this.player.setPosition(tee.x - 12, tee.y);
@@ -388,19 +383,18 @@ export class Game {
     this.state = GAME_STATES.STRATEGY_AIM;
   }
 
-  update(dt = 1) {
+  update() {
     if (this.state === GAME_STATES.SWING_STAGE) {
-      this.swingMeter.update(dt);
+      this.swingMeter.update();
       this.swingOverlay.updateMeterUI(this.swingMeter);
-      this.player.update(dt);
+      this.player.update();
     }
 
     if (this.sceneManager && (this.state === GAME_STATES.BALL_FLIGHT || this.ball.isRolling)) {
       this.ball.update(
         (x, y) => this.sceneManager.sampleTerrainPixel(x, y),
         this.wind,
-        this.audioEngine,
-        dt
+        this.audioEngine
       );
 
       this.camera.setTarget(this.ball.x, this.ball.y, 0.95);
@@ -424,10 +418,13 @@ export class Game {
           this.swingMeter.reset();
           this.state = GAME_STATES.STRATEGY_AIM;
 
-          if (this.ball.currentTerrain.id === 'GREEN') {
-            this.clubManager.selectClubById('PUTTER');
-            this.hud.updateClubInfo(this.clubManager.getCurrentClub(), this.clubManager.getEffectiveDistance());
-          }
+          // Smart Caddie Auto-Select best club & shot mode for next shot!
+          const remainingDist = this.sceneManager.calculateDistanceToPinInMeters(this.ball.x, this.ball.y);
+          const recommended = this.clubManager.autoSelectBestClub(remainingDist, this.ball.currentTerrain);
+
+          this.hud.updateClubInfo(recommended.club, this.clubManager.getEffectiveDistance());
+          this.hud.updateShotTypeInfo(recommended.shotType);
+          this.hud.showShotPopup(`CADDIE: ${recommended.club.name} AUTO-SELECTED`, 1800);
         }
       }
     } else if (this.sceneManager && this.state === GAME_STATES.STRATEGY_AIM && !this.camera.isManualPanning) {
@@ -507,16 +504,7 @@ export class Game {
   }
 
   loop(timestamp) {
-    if (this.lastTimestamp == null) this.lastTimestamp = timestamp;
-    const elapsedMs = timestamp - this.lastTimestamp;
-    this.lastTimestamp = timestamp;
-
-    // Normalize to "frames at 60fps" so tuned constants (speed, gravity, friction...)
-    // keep their intended feel regardless of the display's actual refresh rate.
-    // Clamped to guard against huge jumps after a backgrounded/throttled tab.
-    const dt = Math.min(3, Math.max(0, elapsedMs / (1000 / 60)));
-
-    this.update(dt);
+    this.update();
     this.render();
     requestAnimationFrame((ts) => this.loop(ts));
   }

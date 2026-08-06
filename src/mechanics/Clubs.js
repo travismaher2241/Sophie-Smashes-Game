@@ -1,5 +1,6 @@
 /**
  * 16-Bit Golf Club Specifications & Shot Types (Full 14-Club Bag + Putter)
+ * Includes Smart Caddie Auto-Club Recommendation System
  */
 
 export const SHOT_TYPES = [
@@ -110,5 +111,57 @@ export class ClubManager {
     const shotType = this.getCurrentShotType();
     if (club.isPutter) return club.maxDistance;
     return Math.round(club.maxDistance * shotType.distMult);
+  }
+
+  /**
+   * Smart Caddie Recommender:
+   * Auto-selects the optimal club and shot mode based on distance to pin & terrain lie!
+   */
+  autoSelectBestClub(distanceToPinMeters, terrainType = null) {
+    const liePowerFactor = (terrainType && terrainType.lie) ? terrainType.lie.powerFactor : 1.0;
+
+    // 1. If ball is on Putting Green -> Auto Select Putter & Full Shot
+    if (terrainType && terrainType.id === 'GREEN') {
+      this.selectClubById('PUTTER');
+      this.selectShotTypeById('FULL');
+      return { club: this.getCurrentClub(), shotType: this.getCurrentShotType() };
+    }
+
+    // 2. Adjust target distance for terrain power loss (e.g. Rough = 75%, Sand = 45%)
+    const targetCarryMeters = distanceToPinMeters / Math.max(0.40, liePowerFactor);
+
+    // 3. Short Approach / Green Fringe (Under 35m)
+    if (distanceToPinMeters <= 35) {
+      if (distanceToPinMeters <= 18) {
+        this.selectClubById('LWEDGE');
+        this.selectShotTypeById('CHIP');
+      } else {
+        this.selectClubById('SWEDGE');
+        this.selectShotTypeById('PITCH');
+      }
+      return { club: this.getCurrentClub(), shotType: this.getCurrentShotType() };
+    }
+
+    // 4. Default to FULL SHOT for normal fairway/approach shots
+    this.selectShotTypeById('FULL');
+
+    // 5. Find the non-putter club whose max distance BEST matches targetCarryMeters
+    const playableClubs = CLUBS.filter(c => !c.isPutter);
+    
+    let bestClub = playableClubs[0];
+    let smallestDiff = Math.abs(playableClubs[0].maxDistance - targetCarryMeters);
+
+    for (let i = 1; i < playableClubs.length; i++) {
+      const club = playableClubs[i];
+      const diff = Math.abs(club.maxDistance - targetCarryMeters);
+      // Prefer club that reaches or slightly exceeds distance rather than coming up short
+      if (diff < smallestDiff || (diff === smallestDiff && club.maxDistance >= targetCarryMeters)) {
+        smallestDiff = diff;
+        bestClub = club;
+      }
+    }
+
+    this.selectClubById(bestClub.id);
+    return { club: this.getCurrentClub(), shotType: this.getCurrentShotType() };
   }
 }

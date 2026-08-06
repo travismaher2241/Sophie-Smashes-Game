@@ -15,7 +15,7 @@ export class BallPhysics {
     this.vy = 0;
     this.vz = 0;
 
-    this.radius = 3;
+    this.radius = 4.5; // Scaled for retro arcade visibility
     this.inAir = false;
     this.isRolling = false;
     this.isHoled = false;
@@ -49,7 +49,7 @@ export class BallPhysics {
   /**
    * Launch Ball with Shot Vector
    */
-  launch(power, angle, club, snapOffset = 0, wind = { x: 0, y: 0 }) {
+  launch(power, angle, club, snapOffset = 0, wind = { speed: 0, dirAngle: 0 }) {
     if (club.isPutter) {
       // Ground putting roll
       const putterSpeed = (power * club.maxDistance * 0.12);
@@ -62,9 +62,8 @@ export class BallPhysics {
     } else {
       // 3D Loft Flight Trajectory
       const totalDistance = club.maxDistance * power;
-      const totalAngle = angle + (snapOffset * 0.28); // Hook / Slice curvature
+      const totalAngle = angle + (snapOffset * 0.25); // Hook / Slice curvature
 
-      // Initial velocities
       const launchSpeed = Math.sqrt(totalDistance) * 0.72;
       const loftRad = (club.loft * Math.PI) / 180;
 
@@ -91,7 +90,7 @@ export class BallPhysics {
     }
 
     // Record trail positions
-    if (this.inAir && Math.random() < 0.3) {
+    if (this.inAir && Math.random() < 0.35) {
       this.trail.push({ x: this.x, y: this.y, z: this.z });
       if (this.trail.length > 30) this.trail.shift();
     }
@@ -142,13 +141,11 @@ export class BallPhysics {
         const bounceVz = -this.vz * this.currentTerrain.restitution;
 
         if (bounceVz > 1.2) {
-          // Bounce off ground back into air
           this.vz = bounceVz;
           this.vx *= this.currentTerrain.friction;
           this.vy *= this.currentTerrain.friction;
           if (audioEngine) audioEngine.playBounce(Math.min(0.5, bounceVz / 8));
         } else {
-          // Transition from Air Flight to Ground Roll
           this.vz = 0;
           this.inAir = false;
           this.isRolling = true;
@@ -156,7 +153,6 @@ export class BallPhysics {
         }
       }
     } else if (this.isRolling) {
-      // Sample ground terrain continuously while rolling
       if (terrainPixelSampleCallback) {
         const color = terrainPixelSampleCallback(this.x, this.y);
         this.currentTerrain = identifyTerrainFromColor(color.r, color.g, color.b, color.a);
@@ -178,7 +174,6 @@ export class BallPhysics {
       this.x += this.vx;
       this.y += this.vy;
 
-      // Stopped rolling
       if (Math.hypot(this.vx, this.vy) < 0.08) {
         this.vx = 0;
         this.vy = 0;
@@ -188,12 +183,12 @@ export class BallPhysics {
   }
 
   render(ctx) {
-    if (this.isHoled) return; // Hidden inside cup
+    if (this.isHoled) return;
 
     // 1. Render Flight Trail Dots
     if (this.trail.length > 1) {
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
       for (let i = 0; i < this.trail.length; i++) {
         const p = this.trail[i];
@@ -203,17 +198,17 @@ export class BallPhysics {
       ctx.stroke();
     }
 
-    // 2. Render Ball Shadow (Offset based on height Z)
+    // 2. Render Ball Shadow
     const shadowX = this.x + (this.z * 0.45);
     const shadowY = this.y - (this.z * 0.6);
     const shadowScale = Math.max(0.4, 1 - (this.z / 120));
 
     ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
     ctx.beginPath();
-    ctx.ellipse(shadowX, shadowY, this.radius * shadowScale * 1.2, this.radius * shadowScale * 0.7, 0, 0, Math.PI * 2);
+    ctx.ellipse(shadowX, shadowY, this.radius * shadowScale * 1.3, this.radius * shadowScale * 0.7, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // 3. Render Golf Ball (Scales slightly with altitude Z)
+    // 3. Render Golf Ball
     const ballScale = 1 + (this.z / 90);
     const renderY = this.y - this.z;
 
@@ -223,7 +218,7 @@ export class BallPhysics {
     ctx.fill();
 
     ctx.strokeStyle = '#cfd8dc';
-    ctx.lineWidth = 0.8;
+    ctx.lineWidth = 1;
     ctx.stroke();
   }
 }

@@ -1,6 +1,6 @@
 /**
  * Player Animation Controller (Sophie)
- * 16-Bit Character Rendering & Swing Frame Machine
+ * 16-Bit Character Rendering, Sprite Scaling & Swing Frame Machine
  */
 
 export const PLAYER_ANIM_STATES = {
@@ -112,24 +112,30 @@ export class PlayerController {
     ctx.rotate(this.aimAngle + Math.PI / 2);
 
     if (spriteSheet) {
-      const meta = spriteMetadata || { cols: 8, rows: 1, frameWidth: 48, frameHeight: 48, renderSize: 48 };
+      const meta = spriteMetadata || { cols: 8, rows: 1, frameWidth: 48, frameHeight: 48, renderSize: 115 };
       const cols = meta.cols || 8;
       const col = this.currentFrame % cols;
       const row = Math.floor(this.currentFrame / cols);
 
       const srcX = col * meta.frameWidth;
       const srcY = row * meta.frameHeight;
-      const renderSize = meta.renderSize || 48;
+      const renderSize = meta.renderSize || 115;
 
+      // Draw character ground shadow for 16-bit depth
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.40)';
+      ctx.beginPath();
+      ctx.ellipse(0, 10, renderSize * 0.22, renderSize * 0.1, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Render Sophie character sprite scaled up to 115px
       ctx.drawImage(
         spriteSheet,
         srcX, srcY, meta.frameWidth, meta.frameHeight,
-        -renderSize / 2, -renderSize / 2 - 4, renderSize, renderSize
+        -renderSize / 2, -renderSize / 2 - 8, renderSize, renderSize
       );
     } else {
-      // Basic vector fallback if sprite sheet fails
       ctx.fillStyle = '#d500f9';
-      ctx.fillRect(-8, -8, 16, 16);
+      ctx.fillRect(-12, -12, 24, 24);
     }
 
     ctx.restore();

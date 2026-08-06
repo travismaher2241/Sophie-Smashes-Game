@@ -53,7 +53,7 @@ export class Game {
     this.wind = { speed: 6, dirAngle: 45 };
 
     // Shot aim properties
-    this.aimAngle = -Math.PI / 2; // Facing north toward green by default
+    this.aimAngle = -Math.PI / 2;
 
     // Touch & Drag Panning State
     this.isDraggingMap = false;
@@ -62,26 +62,21 @@ export class Game {
   }
 
   async boot() {
-    // 1. Load assets
     await this.assetLoader.loadAllAssets();
 
-    // 2. Initialize Managers & UI
     this.sceneManager = new SceneManager(this.assetLoader);
     this.hud = new HUD(this);
     this.swingOverlay = new SwingOverlay(this);
 
-    // 3. Setup Swing Meter Callbacks
     this.swingMeter.onStateChange = (meterState) => {
       this.audioEngine.playMenuBeep();
     };
 
     this.swingMeter.onShotTriggered = (shotResult) => {
       this.pendingShot = shotResult;
-      // CLICK 3 LOCKS ACCURACY -> ONLY NOW TRIGGER SWING ANIMATION!
       this.player.startSwingAnimation();
     };
 
-    // 4. Setup Player Impact Callback
     this.player.onImpactFrame = () => {
       this.audioEngine.playImpactSnap();
       this.audioEngine.playSwingWhoosh();
@@ -142,14 +137,10 @@ export class Game {
       }, 350);
     };
 
-    // 5. Register Inputs
     this.setupInputs();
-
-    // 6. Load Hole 1 & Show Welcome Title Screen
     this.switchHole(1);
     this.showTitleScreen();
 
-    // 7. Start Game Loop
     requestAnimationFrame((timestamp) => this.loop(timestamp));
   }
 
@@ -159,9 +150,16 @@ export class Game {
   }
 
   startGameFromTitle() {
-    this.audioEngine.init();
-    this.audioEngine.playMenuBeep();
+    if (this.state !== GAME_STATES.TITLE_SCREEN) return;
     this.state = GAME_STATES.STRATEGY_AIM;
+
+    try {
+      this.audioEngine.init();
+      this.audioEngine.playMenuBeep();
+    } catch (e) {
+      console.warn('Audio Engine Init Warning:', e);
+    }
+
     if (this.hud) {
       this.hud.hideTitleOverlay();
       this.hud.showBanner('WELCOME TO SOPHIE SMASHES!', 'WARRAGUL COUNTRY CLUB - HOLE 1', 3000);
@@ -170,7 +168,7 @@ export class Game {
 
   setupInputs() {
     window.addEventListener('keydown', (e) => {
-      if (e.code === 'Space') {
+      if (e.code === 'Space' || e.code === 'Enter') {
         e.preventDefault();
         this.handleActionTrigger();
       } else if (e.code === 'ArrowLeft') {

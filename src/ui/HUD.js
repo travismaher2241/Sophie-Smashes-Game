@@ -55,14 +55,27 @@ export class HUD {
   }
 
   setupEventListeners() {
+    const triggerStart = (e) => {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      this.game.startGameFromTitle();
+    };
+
     if (this.btnStartGame) {
-      this.btnStartGame.addEventListener('click', () => {
-        this.game.startGameFromTitle();
-      });
+      this.btnStartGame.addEventListener('click', triggerStart);
+      this.btnStartGame.addEventListener('touchstart', triggerStart, { passive: false });
+      this.btnStartGame.addEventListener('pointerdown', triggerStart);
+    }
+
+    if (this.titleScreen) {
+      this.titleScreen.addEventListener('click', triggerStart);
     }
 
     if (this.btnTitleReturn) {
-      this.btnTitleReturn.addEventListener('click', () => {
+      this.btnTitleReturn.addEventListener('click', (e) => {
+        e.stopPropagation();
         this.game.showTitleScreen();
       });
     }
@@ -113,11 +126,17 @@ export class HUD {
   }
 
   showTitleOverlay() {
-    if (this.titleScreen) this.titleScreen.classList.remove('hidden');
+    if (this.titleScreen) {
+      this.titleScreen.style.display = 'flex';
+      this.titleScreen.classList.remove('hidden');
+    }
   }
 
   hideTitleOverlay() {
-    if (this.titleScreen) this.titleScreen.classList.add('hidden');
+    if (this.titleScreen) {
+      this.titleScreen.classList.add('hidden');
+      this.titleScreen.style.display = 'none';
+    }
   }
 
   updateHoleInfo(meta, distanceMeters, scoreText) {

@@ -1,12 +1,15 @@
 /**
- * Authentic Links LS 98 Style 3-Click Swing Power & Accuracy Gauge
+ * Authentic 3-Click Swing System & Power / Accuracy Machine
  * 
- * Click 1 (Address): Starts meter moving from 0% baseline towards 100% power.
- * Click 2 (Top of Swing): Locks Power % (0 - 100%). Cursor reverses towards 0% baseline.
- * Click 3 (Impact Snap): Locks Accuracy at 0% Baseline!
- *   - 0% Baseline Hit: PERFECT STRAIGHT SHOT (0 deviation).
- *   - Clicked Early (above 3%): HOOK (bends left).
- *   - Clicked Late / Missed 0%: SLICE (bends right).
+ * CLICK 1: Start backswing (meter moves from 0% baseline towards 110%).
+ * CLICK 2: Set power input:
+ *   - Before 100%: Partial shot (e.g. 80%, 90% power)
+ *   - At 100%: Controlled full shot (100% optimal power)
+ *   - Beyond 100% (100%-110%): Overswing (adds extra power + overswing penalty dispersion!)
+ * CLICK 3: Set impact accuracy:
+ *   - Early (clicked before 0% baseline): HOOK (curving left)
+ *   - Perfect (clicked on 0% baseline): Intended straight shot
+ *   - Late (clicked past 0% baseline / missed): SLICE (curving right)
  */
 
 export const SWING_STATES = {
@@ -19,14 +22,18 @@ export const SWING_STATES = {
 export class SwingMeter {
   constructor() {
     this.state = SWING_STATES.IDLE;
-    this.cursorPos = 0; // 0 to 100
-    this.speed = 1.6;    // Smooth readable gauge speed
-    this.direction = 1;  // 1 = forward to 100%, -1 = returning to 0%
+    this.cursorPos = 0; // 0% to 110%
+    this.speed = 1.75;  // Gauge speed
+    this.direction = 1; // 1 = forward to 110%, -1 = returning to 0%
     
-    this.lockedPower = 0; // 0.0 to 1.0
-    this.lockedSnap = 0;  // 0.0 = perfect straight, -1.0 = hook, +1.0 = slice
+    // Shot input parameters
+    this.powerInput = 0;        // 0.0 to 1.10
+    this.isOverswing = false;   // True if power > 100%
+    this.overswingPenalty = 0; // 0.0 to 1.0 instability factor
+    this.snapError = 0;        // 0.0 = perfect, -1.0 = hook, +1.0 = slice
+    this.shotTypeLabel = 'CONTROLLED';
 
-    // Baseline sweet spot is at 0% (left end)
+    // Baseline sweet spot position at 0%
     this.sweetSpot = 2.5;
 
     // Callbacks
@@ -38,15 +45,18 @@ export class SwingMeter {
     this.state = SWING_STATES.IDLE;
     this.cursorPos = 0;
     this.direction = 1;
-    this.lockedPower = 0;
-    this.lockedSnap = 0;
+    this.powerInput = 0;
+    this.isOverswing = false;
+    this.overswingPenalty = 0;
+    this.snapError = 0;
+    this.shotTypeLabel = 'CONTROLLED';
     if (this.onStateChange) this.onStateChange(this.state);
   }
 
   handleClick() {
     switch (this.state) {
       case SWING_STATES.IDLE:
-        // Click 1: Start Power Gauge moving forward from 0% to 100%
+        // CLICK 1: Start backswing moving forward from 0% baseline towards 110%
         this.state = SWING_STATES.POWER_GAUGE;
         this.cursorPos = 0;
         this.direction = 1;
@@ -54,34 +64,56 @@ export class SwingMeter {
         break;
 
       case SWING_STATES.POWER_GAUGE:
-        // Click 2: Lock Power % at top of swing, reverse towards 0% baseline
-        this.lockedPower = Math.min(1.0, Math.max(0.1, this.cursorPos / 100));
+        // CLICK 2: Set power input (Partial < 100%, Controlled = 100%, Overswing > 100%)
+        this.powerInput = Math.min(1.10, Math.max(0.10, this.cursorPos / 100));
+
+        if (this.cursorPos > 100) {
+          // Beyond 100% = OVERSWING!
+          this.isOverswing = true;
+          this.overswingPenalty = (this.cursorPos - 100) / 10; // 0.0 to 1.0 scale
+          this.shotTypeLabel = 'OVERSWING';
+        } else if (this.cursorPos >= 96) {
+          // At 100% = Controlled full shot
+          this.isOverswing = false;
+          this.overswingPenalty = 0;
+          this.shotTypeLabel = 'FULL SHOT';
+        } else {
+          // Before 100% = Partial shot
+          this.isOverswing = false;
+          this.overswingPenalty = 0;
+          this.shotTypeLabel = 'PARTIAL SHOT';
+        }
+
+        // Reverse cursor towards 0% baseline for accuracy snap
         this.state = SWING_STATES.SNAP_GAUGE;
-        this.direction = -1; // Reverse back down to 0% baseline
+        this.direction = -1;
         if (this.onStateChange) this.onStateChange(this.state);
         break;
 
       case SWING_STATES.SNAP_GAUGE:
-        // Click 3: Lock Accuracy Snap at 0% Baseline!
+        // CLICK 3: Set impact accuracy at 0% baseline
         const diff = this.cursorPos - this.sweetSpot;
 
         if (Math.abs(diff) <= 3.5) {
-          // PERFECT SWEET SPOT SNAP -> Straight shot!
-          this.lockedSnap = 0.0;
+          // PERFECT SNAP -> Intended shot!
+          this.snapError = 0.0;
         } else if (diff > 3.5) {
-          // Clicked early (cursor above sweet spot) -> HOOK (bends left)
-          this.lockedSnap = -Math.min(1.0, (diff - 3.5) / 25);
+          // Early click (before baseline) -> HOOK
+          this.snapError = -Math.min(1.0, (diff - 3.5) / 22);
         } else {
-          // Clicked past sweet spot -> SLICE (bends right)
-          this.lockedSnap = Math.min(1.0, Math.abs(diff + 3.5) / 15);
+          // Late click (past baseline) -> SLICE
+          this.snapError = Math.min(1.0, Math.abs(diff + 3.5) / 15);
         }
 
         this.state = SWING_STATES.COMPLETE;
         if (this.onStateChange) this.onStateChange(this.state);
         if (this.onShotTriggered) {
           this.onShotTriggered({
-            power: this.lockedPower,
-            snap: this.lockedSnap,
+            powerInput: this.powerInput,
+            isOverswing: this.isOverswing,
+            overswingPenalty: this.overswingPenalty,
+            snapError: this.snapError,
+            shotTypeLabel: this.shotTypeLabel,
             isPerfect: Math.abs(diff) <= 3.5
           });
         }
@@ -95,22 +127,28 @@ export class SwingMeter {
   update() {
     if (this.state === SWING_STATES.POWER_GAUGE) {
       this.cursorPos += this.speed * this.direction;
-      if (this.cursorPos >= 100) {
-        this.cursorPos = 100;
-        this.direction = -1; // Auto reverse at 100% max power
+      if (this.cursorPos >= 110) {
+        this.cursorPos = 110;
+        this.direction = -1; // Auto reverse at 110% max overswing
       }
     } else if (this.state === SWING_STATES.SNAP_GAUGE) {
-      this.cursorPos += this.speed * 1.25 * this.direction;
+      // Faster return speed if overswinging to add snap challenge
+      const returnSpeed = this.speed * (1.25 + this.overswingPenalty * 0.35);
+      this.cursorPos += returnSpeed * this.direction;
+
       if (this.cursorPos <= 0) {
         // Missed baseline snap -> Late click / Slice penalty
         this.cursorPos = 0;
-        this.lockedSnap = 0.85; // Slice
+        this.snapError = 0.90; // Slice
         this.state = SWING_STATES.COMPLETE;
         if (this.onStateChange) this.onStateChange(this.state);
         if (this.onShotTriggered) {
           this.onShotTriggered({
-            power: this.lockedPower,
-            snap: 0.85,
+            powerInput: this.powerInput,
+            isOverswing: this.isOverswing,
+            overswingPenalty: this.overswingPenalty,
+            snapError: 0.90,
+            shotTypeLabel: this.shotTypeLabel,
             isPerfect: false
           });
         }

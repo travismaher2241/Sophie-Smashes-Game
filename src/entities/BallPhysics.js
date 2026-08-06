@@ -1,9 +1,19 @@
 import { TERRAIN_TYPES, identifyTerrainFromColor } from '../utils/TerrainTypes.js';
 
 /**
- * 3D Top-Down Golf Ball Physics Engine
- * Simulates 3D trajectory (x, y, z) with gravity, wind drift,
- * shadow offset, terrain restitution bounce, and surface friction roll.
+ * 3D Top-Down Golf Ball Physics Engine & Final Shot Calculator
+ * 
+ * Final ball flight =
+ *   aim
+ *   + selected club
+ *   + intentional shot shape
+ *   + power input
+ *   + snap error
+ *   + overswing penalty
+ *   + lie
+ *   + slope
+ *   + wind
+ *   + terrain response
  */
 export class BallPhysics {
   constructor(x = 0, y = 0) {
@@ -15,7 +25,7 @@ export class BallPhysics {
     this.vy = 0;
     this.vz = 0;
 
-    this.radius = 4.5; // Scaled for retro arcade visibility
+    this.radius = 4.5;
     this.inAir = false;
     this.isRolling = false;
     this.isHoled = false;
@@ -47,13 +57,38 @@ export class BallPhysics {
   }
 
   /**
-   * Launch Ball with Shot Vector
+   * Launch Ball with Comprehensive Final Shot Calculator Formula:
+   * Final ball flight = aim + selected club + intentional shot shape + power input + snap error + overswing penalty + lie + slope + wind + terrain response
    */
-  launch(power, angle, club, snapOffset = 0, wind = { speed: 0, dirAngle: 0 }) {
+  launch(params) {
+    const {
+      aimAngle = -Math.PI / 2,
+      club,
+      intentionalShape = 0, // Draw (-0.08) or Fade (+0.08)
+      powerInput = 1.0,     // Partial (<100%), Controlled (=100%), Overswing (>100%)
+      snapError = 0.0,      // Early = Hook (-), Perfect = 0, Late = Slice (+)
+      overswingPenalty = 0, // Overswing dispersion penalty
+      terrainLie = { powerFactor: 1.0, loftFactor: 1.0 },
+      slope = { x: 0, y: 0 },
+      wind = { speed: 0, dirAngle: 0 }
+    } = params;
+
+    // 1. Calculate Base Distance & Power Input & Lie
+    const effectivePower = powerInput * terrainLie.powerFactor;
+    const totalDistance = club.maxDistance * effectivePower;
+
+    // 2. Calculate Final Shot Angle (aim + intentional shape + snap error + overswing penalty + slope)
+    const overswingDrift = (Math.random() - 0.5) * overswingPenalty * 0.14;
+    const slopeAngleOffset = (slope.x * 0.05);
+
+    // Total Angle calculation:
+    // Early click / snapError < 0 -> Hook (left curvature)
+    // Late click / snapError > 0 -> Slice (right curvature)
+    const totalAngle = aimAngle + intentionalShape + (snapError * 0.28) + overswingDrift + slopeAngleOffset;
+
     if (club.isPutter) {
-      // Ground putting roll
-      const putterSpeed = (power * club.maxDistance * 0.12);
-      const totalAngle = angle + (snapOffset * 0.15);
+      // Ground Putting roll
+      const putterSpeed = (effectivePower * club.maxDistance * 0.12);
       this.vx = Math.cos(totalAngle) * putterSpeed;
       this.vy = Math.sin(totalAngle) * putterSpeed;
       this.vz = 0;
@@ -61,11 +96,9 @@ export class BallPhysics {
       this.isRolling = true;
     } else {
       // 3D Loft Flight Trajectory
-      const totalDistance = club.maxDistance * power;
-      const totalAngle = angle + (snapOffset * 0.25); // Hook / Slice curvature
-
       const launchSpeed = Math.sqrt(totalDistance) * 0.72;
-      const loftRad = (club.loft * Math.PI) / 180;
+      const effectiveLoft = club.loft * (terrainLie.loftFactor || 1.0);
+      const loftRad = (effectiveLoft * Math.PI) / 180;
 
       this.vx = Math.cos(totalAngle) * launchSpeed * Math.cos(loftRad);
       this.vy = Math.sin(totalAngle) * launchSpeed * Math.cos(loftRad);
@@ -115,7 +148,7 @@ export class BallPhysics {
       this.y += this.vy;
       this.z += this.vz;
 
-      // Ground Impact Detection
+      // Ground Impact Detection & Terrain Response
       if (this.z <= 0) {
         this.z = 0;
 
@@ -137,7 +170,7 @@ export class BallPhysics {
           return;
         }
 
-        // Calculate Restitution Bounce
+        // Calculate Terrain Response (Restitution Bounce)
         const bounceVz = -this.vz * this.currentTerrain.restitution;
 
         if (bounceVz > 1.2) {
@@ -167,7 +200,7 @@ export class BallPhysics {
         return;
       }
 
-      // Apply Ground Surface Friction
+      // Apply Terrain Surface Friction
       this.vx *= this.currentTerrain.friction;
       this.vy *= this.currentTerrain.friction;
 

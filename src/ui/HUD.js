@@ -90,7 +90,10 @@ export class HUD {
     if (this.btnAimRight) this.btnAimRight.addEventListener('click', () => this.game.adjustAim(0.06));
 
     if (this.btnOpenSwing) {
-      this.btnOpenSwing.addEventListener('click', () => this.game.openSwingOverlay());
+      // Route through handleActionTrigger (not openSwingOverlay directly) so a mouse/touch
+      // click on this button behaves identically to a Spacebar press: it opens the swing
+      // stage AND fires click 1 (start backswing) in one action, matching the keyboard flow.
+      this.btnOpenSwing.addEventListener('click', () => this.game.handleActionTrigger());
     }
 
     if (this.btnCloseSwing) {
@@ -120,9 +123,11 @@ export class HUD {
       this.btnAudioToggle.innerText = enabled ? 'SFX ON' : 'SFX OFF';
     });
 
-    this.btnResetShot.addEventListener('click', () => {
-      this.game.resetCurrentShot();
-    });
+    if (this.btnResetShot) {
+      this.btnResetShot.addEventListener('click', () => {
+        this.game.resetCurrentShot();
+      });
+    }
   }
 
   showTitleOverlay() {

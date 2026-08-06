@@ -378,7 +378,7 @@ export class Game {
   }
 
   resetCurrentShot() {
-    if (!this.sceneManager) return;
+    if (!this.sceneManager || this.state === GAME_STATES.TITLE_SCREEN) return;
     const tee = this.sceneManager.getTeePosition();
     this.ball.setPosition(tee.x, tee.y, 0);
     this.player.setPosition(tee.x - 12, tee.y);
@@ -388,18 +388,19 @@ export class Game {
     this.state = GAME_STATES.STRATEGY_AIM;
   }
 
-  update() {
+  update(dt = 1) {
     if (this.state === GAME_STATES.SWING_STAGE) {
-      this.swingMeter.update();
+      this.swingMeter.update(dt);
       this.swingOverlay.updateMeterUI(this.swingMeter);
-      this.player.update();
+      this.player.update(dt);
     }
 
     if (this.sceneManager && (this.state === GAME_STATES.BALL_FLIGHT || this.ball.isRolling)) {
       this.ball.update(
         (x, y) => this.sceneManager.sampleTerrainPixel(x, y),
         this.wind,
-        this.audioEngine
+        this.audioEngine,
+        dt
       );
 
       this.camera.setTarget(this.ball.x, this.ball.y, 0.95);
@@ -506,7 +507,16 @@ export class Game {
   }
 
   loop(timestamp) {
-    this.update();
+    if (this.lastTimestamp == null) this.lastTimestamp = timestamp;
+    const elapsedMs = timestamp - this.lastTimestamp;
+    this.lastTimestamp = timestamp;
+
+    // Normalize to "frames at 60fps" so tuned constants (speed, gravity, friction...)
+    // keep their intended feel regardless of the display's actual refresh rate.
+    // Clamped to guard against huge jumps after a backgrounded/throttled tab.
+    const dt = Math.min(3, Math.max(0, elapsedMs / (1000 / 60)));
+
+    this.update(dt);
     this.render();
     requestAnimationFrame((ts) => this.loop(ts));
   }

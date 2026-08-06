@@ -52,10 +52,10 @@ export class PlayerController {
     this.frameTimer = 0;
   }
 
-  update() {
+  update(dt = 1) {
     if (!this.isPlayingSwing) {
       // Idle Address wiggle (alternates frames 0 and 1)
-      this.frameTimer++;
+      this.frameTimer += dt;
       if (this.frameTimer > 40) {
         this.currentFrame = (this.currentFrame === 0) ? 1 : 0;
         this.frameTimer = 0;
@@ -64,7 +64,7 @@ export class PlayerController {
     }
 
     // Active Swing Animation Frame Sequencing
-    this.frameTimer++;
+    this.frameTimer += dt;
     const frameDelay = 6; // Frames per animation tick
 
     if (this.frameTimer >= frameDelay) {

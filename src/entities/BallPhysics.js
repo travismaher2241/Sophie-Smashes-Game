@@ -116,7 +116,7 @@ export class BallPhysics {
     this.inHazard = false;
   }
 
-  update(terrainPixelSampleCallback, wind = { speed: 0, dirAngle: 0 }, audioEngine = null) {
+  update(terrainPixelSampleCallback, wind = { speed: 0, dirAngle: 0 }, audioEngine = null, dt = 1) {
     if (this.isHoled || (!this.inAir && !this.isRolling && Math.hypot(this.vx, this.vy) < 0.05)) {
       this.vx = 0;
       this.vy = 0;
@@ -125,26 +125,28 @@ export class BallPhysics {
       return;
     }
 
-    if (this.inAir && Math.random() < 0.35) {
+    if (this.inAir && Math.random() < 0.35 * dt) {
       this.trail.push({ x: this.x, y: this.y, z: this.z });
       if (this.trail.length > 30) this.trail.shift();
     }
 
     if (this.inAir) {
-      this.vx *= this.airDrag;
-      this.vy *= this.airDrag;
+      // Exponential decay factors must be raised to dt (not multiplied by it) to stay
+      // correct when frame time varies - see Game.js loop() for why dt exists at all.
+      this.vx *= Math.pow(this.airDrag, dt);
+      this.vy *= Math.pow(this.airDrag, dt);
 
       const windRad = (wind.dirAngle * Math.PI) / 180;
-      const windForceX = Math.cos(windRad) * wind.speed * 0.005;
-      const windForceY = Math.sin(windRad) * wind.speed * 0.005;
+      const windForceX = Math.cos(windRad) * wind.speed * 0.005 * dt;
+      const windForceY = Math.sin(windRad) * wind.speed * 0.005 * dt;
       this.vx += windForceX;
       this.vy += windForceY;
 
-      this.vz -= this.gravity;
+      this.vz -= this.gravity * dt;
 
-      this.x += this.vx;
-      this.y += this.vy;
-      this.z += this.vz;
+      this.x += this.vx * dt;
+      this.y += this.vy * dt;
+      this.z += this.vz * dt;
 
       if (this.z <= 0) {
         this.z = 0;
@@ -196,11 +198,11 @@ export class BallPhysics {
 
       // Apply Terrain Surface Friction modified by Shot Mode Roll Multiplier
       const rollFriction = Math.min(0.96, (this.currentTerrain.friction || 0.88) * (0.85 + this.currentRollMult * 0.15));
-      this.vx *= rollFriction;
-      this.vy *= rollFriction;
+      this.vx *= Math.pow(rollFriction, dt);
+      this.vy *= Math.pow(rollFriction, dt);
 
-      this.x += this.vx;
-      this.y += this.vy;
+      this.x += this.vx * dt;
+      this.y += this.vy * dt;
 
       if (Math.hypot(this.vx, this.vy) < 0.08) {
         this.vx = 0;

@@ -127,17 +127,21 @@ export class SwingMeter {
     }
   }
 
-  update() {
+  update(dt = 1) {
     if (this.state === SWING_STATES.POWER_GAUGE) {
-      this.cursorPos += this.speed * this.direction;
+      this.cursorPos += this.speed * this.direction * dt;
       if (this.cursorPos >= 110) {
         this.cursorPos = 110;
         this.direction = -1; // Auto reverse at 110% max overswing
+      } else if (this.cursorPos <= 0) {
+        this.cursorPos = 0;
+        this.direction = 1; // Auto reverse at 0% - without this the cursor ran away
+                             // to arbitrarily negative % if the player hesitated on click 2
       }
     } else if (this.state === SWING_STATES.SNAP_GAUGE) {
       // Faster return speed if overswinging to add snap challenge
       const returnSpeed = this.speed * (1.25 + this.overswingPenalty * 0.35);
-      this.cursorPos += returnSpeed * this.direction;
+      this.cursorPos += returnSpeed * this.direction * dt;
 
       // Let the cursor travel past the 0% baseline so a late click can still
       // land in the SLICE zone (previously clamping at 0 made SLICE unreachable

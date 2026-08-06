@@ -485,6 +485,7 @@ html, body {
   object-fit: contain;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+  cursor: pointer;
 }
 
 /* Links LS 98 Swing Gauge inside Modal */

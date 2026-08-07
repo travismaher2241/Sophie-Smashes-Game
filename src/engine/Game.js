@@ -287,9 +287,10 @@ export class Game {
     this.state = GAME_STATES.SWING_STAGE;
     this.player.resetToAddress();
     this.swingMeter.reset();
-    this.swingOverlay.show();
     const club = this.clubManager.getCurrentClub();
     const shotType = this.clubManager.getCurrentShotType();
+    this.swingMeter.setShotType(shotType);
+    this.swingOverlay.show();
     this.hud.showBanner(`SWING STAGE: ${club.name}`, `${shotType.name} (${this.clubManager.getEffectiveDistance()}m)`, 2200);
   }
 

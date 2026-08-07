@@ -132,9 +132,9 @@ export class SwingOverlay {
     ctx.lineWidth = thickness;
     ctx.stroke();
 
-    // d) White Sweet Spot Target Band at Bottom Center (Accuracy Snap 0%)
-    const snapLeftAng = posToAngle(-3.5);
-    const snapRightAng = posToAngle(3.5);
+    // d) White Sweet Spot Target Band at Bottom Center (Accuracy Snap 0% - 14 deg arc)
+    const snapLeftAng = posToAngle(-5.0);
+    const snapRightAng = posToAngle(5.0);
     ctx.beginPath();
     ctx.arc(cx, cy, midR, snapLeftAng, snapRightAng, true);
     ctx.strokeStyle = '#ffffff';
@@ -142,7 +142,7 @@ export class SwingOverlay {
     ctx.stroke();
 
     ctx.strokeStyle = '#00e676';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.5;
     ctx.beginPath();
     ctx.arc(cx, cy, outerR + 3, snapLeftAng, snapRightAng, true);
     ctx.stroke();
@@ -206,7 +206,10 @@ export class SwingOverlay {
     ctx.fillStyle = '#00e676';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    if (meter.state === SWING_STATES.POWER_GAUGE) {
+    if (meter.topPauseTimer > 0) {
+      ctx.fillStyle = '#ffea00';
+      ctx.fillText('PAUSE', cx, cy);
+    } else if (meter.state === SWING_STATES.POWER_GAUGE) {
       ctx.fillText(`${Math.round(meter.cursorPos)}%`, cx, cy);
     } else if (meter.state === SWING_STATES.SNAP_GAUGE) {
       ctx.fillText('SNAP!', cx, cy);

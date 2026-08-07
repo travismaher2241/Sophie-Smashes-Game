@@ -15,25 +15,25 @@ export const SHOT_TYPES = [
   {
     id: 'PITCH',
     name: 'PITCH SHOT',
-    distMult: 0.75,
-    loftMult: 1.25,
-    rollMult: 0.4,
+    distMult: 0.55,
+    loftMult: 1.35,
+    rollMult: 0.25,
     description: 'High arc, soft landing with minimal roll.'
   },
   {
     id: 'CHIP',
     name: 'CHIP SHOT',
-    distMult: 0.50,
-    loftMult: 0.55,
-    rollMult: 1.8,
-    description: 'Low bump-and-run shot with extended ground roll.'
+    distMult: 0.35,
+    loftMult: 0.50,
+    rollMult: 0.60,
+    description: 'Low bump-and-run shot with controlled ground roll.'
   },
   {
     id: 'FLOP',
     name: 'FLOP SHOT',
-    distMult: 0.40,
-    loftMult: 1.45,
-    rollMult: 0.1,
+    distMult: 0.25,
+    loftMult: 1.60,
+    rollMult: 0.05,
     description: 'Ultra-high vertical flop landing dead on green.'
   }
 ];
@@ -48,12 +48,12 @@ export const CLUBS = [
   { id: '6IRON',    name: '6-IRON (6I)',   maxDistance: 140, loft: 30, rollFactor: 0.85 },
   { id: '7IRON',    name: '7-IRON (7I)',   maxDistance: 130, loft: 33, rollFactor: 0.80 },
   { id: '8IRON',    name: '8-IRON (8I)',   maxDistance: 120, loft: 37, rollFactor: 0.70 },
-  { id: '9IRON',    name: '9-IRON (9I)',   maxDistance: 110, loft: 41, rollFactor: 0.60 },
-  { id: 'PWEDGE',   name: 'PITCH WEDGE (PW)', maxDistance: 100, loft: 45, rollFactor: 0.50 },
-  { id: 'GWEDGE',   name: 'GAP WEDGE (GW)',   maxDistance: 88,  loft: 50, rollFactor: 0.40 },
-  { id: 'SWEDGE',   name: 'SAND WEDGE (SW)',  maxDistance: 75,  loft: 54, rollFactor: 0.30 },
-  { id: 'LWEDGE',   name: 'LOB WEDGE (LW)',   maxDistance: 60,  loft: 58, rollFactor: 0.15 },
-  { id: 'PUTTER',   name: 'PUTTER (PT)',      maxDistance: 35,  loft: 0,  rollFactor: 1.5, isPutter: true }
+  { id: '9IRON',    name: '9-IRON (9I)',   maxDistance: 105, loft: 41, rollFactor: 0.60 },
+  { id: 'PWEDGE',   name: 'PITCH WEDGE (PW)', maxDistance: 85, loft: 45, rollFactor: 0.45 },
+  { id: 'GWEDGE',   name: 'GAP WEDGE (GW)',   maxDistance: 70, loft: 50, rollFactor: 0.35 },
+  { id: 'SWEDGE',   name: 'SAND WEDGE (SW)',  maxDistance: 50, loft: 54, rollFactor: 0.25 },
+  { id: 'LWEDGE',   name: 'LOB WEDGE (LW)',   maxDistance: 35, loft: 58, rollFactor: 0.10 },
+  { id: 'PUTTER',   name: 'PUTTER (PT)',      maxDistance: 25, loft: 0,  rollFactor: 1.5, isPutter: true }
 ];
 
 export class ClubManager {

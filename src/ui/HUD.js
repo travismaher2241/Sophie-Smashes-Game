@@ -131,6 +131,12 @@ export class HUD {
     }
   }
 
+  setSwingButtonText(text) {
+    if (this.btnOpenSwing) {
+      this.btnOpenSwing.innerText = text;
+    }
+  }
+
   showTitleOverlay() {
     if (this.titleScreen) {
       this.titleScreen.style.display = 'flex';

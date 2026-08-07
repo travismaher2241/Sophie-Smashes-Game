@@ -15,13 +15,14 @@ export class Flagstick {
   }
 
   checkBallInCup(ball) {
-    if (ball.z > 8) return false; // Ball flying too high over pin
+    // Ball MUST NOT be in the air or flying high over green
+    if (ball.inAir || ball.z > 2) return false;
 
     const dist = Math.hypot(ball.x - this.x, ball.y - this.y);
     const ballSpeed = Math.hypot(ball.vx, ball.vy);
 
-    // If ball speed is reasonable and close to cup center -> HOLE IN!
-    if (dist < this.cupRadius && ballSpeed < 6.5) {
+    // Ball MUST enter cup radius (7px) at gentle rolling speed (< 4.2) or rest inside cup
+    if (dist <= this.cupRadius && (ballSpeed < 4.2 || (!ball.isRolling && dist <= this.cupRadius))) {
       ball.x = this.x;
       ball.y = this.y;
       ball.z = 0;

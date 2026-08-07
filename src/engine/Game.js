@@ -52,8 +52,14 @@ export class Game {
     this.assetsLoaded = false;
     this.wind = { speed: 6, dirAngle: 45 };
 
-    // Shot aim properties
+    // Shot aim & Putting properties
     this.aimAngle = -Math.PI / 2;
+    this.isPuttingMode = false;
+    this.isChargingPutt = false;
+    this.puttPower = 0.5;
+    this.puttPowerDir = 1;
+    this.isDraggingPutt = false;
+    this.dragStartPx = { x: 0, y: 0 };
 
     // Touch & Drag Panning State
     this.isDraggingMap = false;
@@ -82,13 +88,10 @@ export class Game {
       this.swingMeter.onStateChange = (meterState) => {
         this.audioEngine.playMenuBeep();
         if (meterState === SWING_STATES.POWER_GAUGE) {
-          // CLICK 1: Start backswing (Frame 2)
           this.player.startBackswing();
         } else if (meterState === SWING_STATES.SNAP_GAUGE) {
-          // CLICK 2: Lock power & reach top of backswing (Frame 3)
           this.player.reachTop();
         } else if (meterState === SWING_STATES.COMPLETE) {
-          // CLICK 3: Lock accuracy & fire downswing (Frame 4 / Impact)
           this.player.fireDownswing();
         }
       };
@@ -154,7 +157,6 @@ export class Game {
       };
 
       this.player.onSwingComplete = () => {
-        // Immediately hide side-view swing overlay and cut to top-down camera tracking ball flight!
         this.closeSwingOverlay();
         this.state = GAME_STATES.BALL_FLIGHT;
       };
@@ -227,23 +229,44 @@ export class Game {
 
     const onDragStart = (clientPos) => {
       if (this.state === GAME_STATES.STRATEGY_AIM) {
-        this.isDraggingMap = true;
-        this.dragStartX = clientPos.x;
-        this.dragStartY = clientPos.y;
+        if (this.isPuttingMode) {
+          this.isDraggingPutt = true;
+          this.dragStartPx = clientPos;
+        } else {
+          this.isDraggingMap = true;
+          this.dragStartX = clientPos.x;
+          this.dragStartY = clientPos.y;
+        }
       }
     };
 
     const onDragMove = (clientPos) => {
-      if (this.isDraggingMap && this.state === GAME_STATES.STRATEGY_AIM) {
-        const dx = clientPos.x - this.dragStartX;
-        const dy = clientPos.y - this.dragStartY;
-        this.camera.panBy(dx, dy);
-        this.dragStartX = clientPos.x;
-        this.dragStartY = clientPos.y;
+      if (this.state === GAME_STATES.STRATEGY_AIM) {
+        if (this.isDraggingPutt) {
+          const dx = clientPos.x - this.dragStartPx.x;
+          const dy = clientPos.y - this.dragStartPx.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist > 5) {
+            this.aimAngle = Math.atan2(dy, dx);
+            this.puttPower = Math.min(1.0, Math.max(0.1, dist / 110));
+          }
+        } else if (this.isDraggingMap) {
+          const dx = clientPos.x - this.dragStartX;
+          const dy = clientPos.y - this.dragStartY;
+          this.camera.panBy(dx, dy);
+          this.dragStartX = clientPos.x;
+          this.dragStartY = clientPos.y;
+        }
       }
     };
 
     const onDragEnd = () => {
+      if (this.isDraggingPutt) {
+        this.isDraggingPutt = false;
+        if (this.puttPower > 0.15) {
+          this.firePutt();
+        }
+      }
       this.isDraggingMap = false;
     };
 
@@ -284,10 +307,17 @@ export class Game {
   openSwingOverlay() {
     if (this.state !== GAME_STATES.STRATEGY_AIM) return;
     this.audioEngine.init();
+
+    const club = this.clubManager.getCurrentClub();
+    // Bypasses side-view swing modal when putting or on green!
+    if (this.isPuttingMode || club.isPutter) {
+      this.handlePuttTrigger();
+      return;
+    }
+
     this.state = GAME_STATES.SWING_STAGE;
     this.player.resetToAddress();
     this.swingMeter.reset();
-    const club = this.clubManager.getCurrentClub();
     const shotType = this.clubManager.getCurrentShotType();
     this.swingMeter.setShotType(shotType);
     this.swingOverlay.show();
@@ -301,14 +331,61 @@ export class Game {
     }
   }
 
+  handlePuttTrigger() {
+    if (!this.isChargingPutt) {
+      this.isChargingPutt = true;
+      this.puttPower = 0.15;
+      this.puttPowerDir = 1;
+      this.audioEngine.playMenuBeep();
+    } else {
+      this.firePutt();
+    }
+  }
+
+  firePutt() {
+    this.isChargingPutt = false;
+    this.isDraggingPutt = false;
+    const club = this.clubManager.selectClubById('PUTTER');
+    const shotType = this.clubManager.selectShotTypeById('FULL');
+
+    const officialMeters = this.sceneManager.currentMetadata?.meters || 300;
+    const tee = this.sceneManager.getTeePosition();
+    const pin = this.sceneManager.getPinPosition();
+    const mapTotalPixelLength = Math.hypot(pin.x - tee.x, pin.y - tee.y) || 1745;
+
+    this.ball.launch({
+      aimAngle: this.aimAngle,
+      club: club,
+      shotType: shotType,
+      intentionalShape: 0,
+      powerInput: this.puttPower,
+      snapError: 0,
+      overswingPenalty: 0,
+      terrainLie: { powerFactor: 1.0, loftFactor: 1.0 },
+      slope: { x: 0, y: 0 },
+      wind: { speed: 0, dirAngle: 0 },
+      officialHoleMeters: officialMeters,
+      mapTotalPixelLength: mapTotalPixelLength
+    });
+
+    this.sceneManager.recordStroke();
+    this.audioEngine.playImpactSnap();
+    this.audioEngine.playSwingWhoosh();
+    this.state = GAME_STATES.BALL_FLIGHT;
+  }
+
   handleActionTrigger() {
     this.audioEngine.init();
 
     if (this.state === GAME_STATES.TITLE_SCREEN) {
       this.startGameFromTitle();
     } else if (this.state === GAME_STATES.STRATEGY_AIM) {
-      this.openSwingOverlay();
-      this.swingMeter.handleClick();
+      if (this.isPuttingMode || this.clubManager.getCurrentClub().isPutter) {
+        this.handlePuttTrigger();
+      } else {
+        this.openSwingOverlay();
+        this.swingMeter.handleClick();
+      }
     } else if (this.state === GAME_STATES.SWING_STAGE) {
       this.swingMeter.handleClick();
     } else if (this.state === GAME_STATES.HOLE_COMPLETE) {
@@ -335,7 +412,10 @@ export class Game {
 
     this.swingMeter.reset();
     this.closeSwingOverlay();
-    
+    this.isPuttingMode = false;
+    this.isChargingPutt = false;
+    this.hud.setSwingButtonText('SWING [SPACEBAR]');
+
     if (this.state !== GAME_STATES.TITLE_SCREEN) {
       this.state = GAME_STATES.STRATEGY_AIM;
     }
@@ -348,8 +428,6 @@ export class Game {
     this.camera.jumpTo(tee.x, tee.y, 0.85);
 
     const distMeters = this.sceneManager.calculateDistanceToPinInMeters(tee.x, tee.y);
-
-    // Auto-select optimal club & shot mode for this hole/shot!
     this.clubManager.autoSelectBestClub(distMeters, TERRAIN_TYPES.TEE_BOX);
 
     this.hud.updateHoleInfo(meta, distMeters, this.sceneManager.getScoreSummary());
@@ -368,6 +446,8 @@ export class Game {
   changeClub(dir) {
     if (this.state !== GAME_STATES.STRATEGY_AIM) return;
     const club = dir > 0 ? this.clubManager.nextClub() : this.clubManager.prevClub();
+    this.isPuttingMode = club.isPutter;
+    this.hud.setSwingButtonText(this.isPuttingMode ? 'PUTT [SPACE]' : 'SWING [SPACEBAR]');
     this.hud.updateClubInfo(club, this.clubManager.getEffectiveDistance());
     this.audioEngine.playMenuBeep();
   }
@@ -392,6 +472,9 @@ export class Game {
     this.player.resetToAddress();
     this.swingMeter.reset();
     this.closeSwingOverlay();
+    this.isPuttingMode = false;
+    this.isChargingPutt = false;
+    this.hud.setSwingButtonText('SWING [SPACEBAR]');
     this.state = GAME_STATES.STRATEGY_AIM;
   }
 
@@ -400,6 +483,17 @@ export class Game {
       this.swingMeter.update();
       this.swingOverlay.updateMeterUI(this.swingMeter);
       this.player.update();
+    }
+
+    if (this.isChargingPutt && this.state === GAME_STATES.STRATEGY_AIM) {
+      this.puttPower += 0.022 * this.puttPowerDir;
+      if (this.puttPower >= 1.0) {
+        this.puttPower = 1.0;
+        this.puttPowerDir = -1;
+      } else if (this.puttPower <= 0.08) {
+        this.puttPower = 0.08;
+        this.puttPowerDir = 1;
+      }
     }
 
     if (this.sceneManager && (this.state === GAME_STATES.BALL_FLIGHT || this.ball.isRolling)) {
@@ -411,6 +505,7 @@ export class Game {
 
       this.camera.setTarget(this.ball.x, this.ball.y, 0.95);
 
+      // Hole Completion ONLY triggers when ball enters cup radius!
       if (this.flagstick.checkBallInCup(this.ball)) {
         this.audioEngine.playCupSink();
         this.state = GAME_STATES.HOLE_COMPLETE;
@@ -422,6 +517,16 @@ export class Game {
           this.hud.showBanner('WATER HAZARD!', '+1 PENALTY STROKE', 2500);
           setTimeout(() => this.resetCurrentShot(), 1200);
         } else {
+          // Double-Par Limit Check
+          const par = this.sceneManager.currentMetadata?.par || 4;
+          const maxStrokes = par * 2;
+          if (this.sceneManager.currentHoleStrokes >= maxStrokes) {
+            this.audioEngine.playMenuBeep();
+            this.state = GAME_STATES.HOLE_COMPLETE;
+            this.hud.showBanner('DOUBLE PAR LIMIT REACHED', `HOLE COMPLETED IN ${maxStrokes} STROKES`, 0);
+            return;
+          }
+
           this.player.setPosition(this.ball.x - 12, this.ball.y);
           const pin = this.sceneManager.getPinPosition();
           this.aimAngle = Math.atan2(pin.y - this.ball.y, pin.x - this.ball.x);
@@ -430,28 +535,44 @@ export class Game {
           this.swingMeter.reset();
           this.state = GAME_STATES.STRATEGY_AIM;
 
-          // Smart Caddie Auto-Select best club & shot mode for next shot!
           const remainingDist = this.sceneManager.calculateDistanceToPinInMeters(this.ball.x, this.ball.y);
-          const recommended = this.clubManager.autoSelectBestClub(remainingDist, this.ball.currentTerrain);
 
-          this.hud.updateClubInfo(recommended.club, this.clubManager.getEffectiveDistance());
-          this.hud.updateShotTypeInfo(recommended.shotType);
-          this.hud.showShotPopup(`CADDIE: ${recommended.club.name} AUTO-SELECTED`, 1800);
+          if (this.ball.currentTerrain.id === 'GREEN' || remainingDist <= 12) {
+            this.isPuttingMode = true;
+            this.clubManager.selectClubById('PUTTER');
+            this.clubManager.selectShotTypeById('FULL');
+            this.hud.updateClubInfo(this.clubManager.getCurrentClub(), this.clubManager.getEffectiveDistance());
+            this.hud.updateShotTypeInfo(this.clubManager.getCurrentShotType());
+            this.hud.setSwingButtonText('PUTT [SPACE]');
+            this.hud.showBanner('ON THE GREEN!', 'USE TOP-DOWN PUTTING VIEW TO HOLE IN', 2200);
+          } else {
+            this.isPuttingMode = false;
+            this.hud.setSwingButtonText('SWING [SPACEBAR]');
+            const recommended = this.clubManager.autoSelectBestClub(remainingDist, this.ball.currentTerrain);
+            this.hud.updateClubInfo(recommended.club, this.clubManager.getEffectiveDistance());
+            this.hud.updateShotTypeInfo(recommended.shotType);
+            this.hud.showShotPopup(`CADDIE: ${recommended.club.name} AUTO-SELECTED`, 1800);
+          }
         }
       }
     } else if (this.sceneManager && this.state === GAME_STATES.STRATEGY_AIM && !this.camera.isManualPanning) {
-      const club = this.clubManager.getCurrentClub();
-      const effDist = this.clubManager.getEffectiveDistance();
-      const officialMeters = this.sceneManager.currentMetadata?.meters || 300;
-      const tee = this.sceneManager.getTeePosition();
-      const pin = this.sceneManager.getPinPosition();
-      const mapTotalPixelLength = Math.hypot(pin.x - tee.x, pin.y - tee.y) || 1745;
-      const pixelsPerMeter = mapTotalPixelLength / officialMeters;
+      if (this.isPuttingMode) {
+        // Keep camera zoomed in close (1.7x zoom) focused on Top-Down Green Grid!
+        this.camera.setTarget(this.ball.x, this.ball.y, 1.7);
+      } else {
+        const club = this.clubManager.getCurrentClub();
+        const effDist = this.clubManager.getEffectiveDistance();
+        const officialMeters = this.sceneManager.currentMetadata?.meters || 300;
+        const tee = this.sceneManager.getTeePosition();
+        const pin = this.sceneManager.getPinPosition();
+        const mapTotalPixelLength = Math.hypot(pin.x - tee.x, pin.y - tee.y) || 1745;
+        const pixelsPerMeter = mapTotalPixelLength / officialMeters;
 
-      const targetDist = effDist * pixelsPerMeter;
-      const targetX = this.ball.x + Math.cos(this.aimAngle) * targetDist;
-      const targetY = this.ball.y + Math.sin(this.aimAngle) * targetDist;
-      this.camera.setAimTarget(this.ball.x, this.ball.y, targetX, targetY);
+        const targetDist = effDist * pixelsPerMeter;
+        const targetX = this.ball.x + Math.cos(this.aimAngle) * targetDist;
+        const targetY = this.ball.y + Math.sin(this.aimAngle) * targetDist;
+        this.camera.setAimTarget(this.ball.x, this.ball.y, targetX, targetY);
+      }
     }
 
     this.camera.update();
@@ -472,41 +593,131 @@ export class Game {
       this.flagstick.render(this.ctx);
 
       if (this.state === GAME_STATES.STRATEGY_AIM) {
-        const club = this.clubManager.getCurrentClub();
-        const effDist = this.clubManager.getEffectiveDistance();
         const officialMeters = this.sceneManager.currentMetadata?.meters || 300;
         const tee = this.sceneManager.getTeePosition();
         const pin = this.sceneManager.getPinPosition();
         const mapTotalPixelLength = Math.hypot(pin.x - tee.x, pin.y - tee.y) || 1745;
         const pixelsPerMeter = mapTotalPixelLength / officialMeters;
 
-        const targetDist = effDist * pixelsPerMeter;
-        const targetX = this.ball.x + Math.cos(this.aimAngle) * targetDist;
-        const targetY = this.ball.y + Math.sin(this.aimAngle) * targetDist;
+        if (this.isPuttingMode) {
+          // 1. Render Top-Down Green Grid Contour Lines
+          this.ctx.strokeStyle = 'rgba(0, 230, 118, 0.45)';
+          this.ctx.lineWidth = 1.5;
 
-        this.ctx.strokeStyle = 'rgba(255, 235, 59, 0.85)';
-        this.ctx.lineWidth = 2;
-        this.ctx.setLineDash([6, 6]);
-        this.ctx.beginPath();
-        this.ctx.moveTo(this.ball.x, this.ball.y);
-        this.ctx.lineTo(targetX, targetY);
-        this.ctx.stroke();
-        this.ctx.setLineDash([]);
+          for (let m = 2; m <= 12; m += 2) {
+            this.ctx.beginPath();
+            this.ctx.arc(pin.x, pin.y, m * pixelsPerMeter, 0, Math.PI * 2);
+            this.ctx.stroke();
+          }
 
-        this.ctx.strokeStyle = '#00e676';
-        this.ctx.lineWidth = 2.5;
-        this.ctx.beginPath();
-        this.ctx.arc(targetX, targetY, 14, 0, Math.PI * 2);
-        this.ctx.stroke();
+          // Subtle grid square lines
+          this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+          this.ctx.lineWidth = 1;
+          const gridStep = 3 * pixelsPerMeter;
+          for (let gx = pin.x - 24 * pixelsPerMeter; gx <= pin.x + 24 * pixelsPerMeter; gx += gridStep) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(gx, pin.y - 24 * pixelsPerMeter);
+            this.ctx.lineTo(gx, pin.y + 24 * pixelsPerMeter);
+            this.ctx.stroke();
+          }
+          for (let gy = pin.y - 24 * pixelsPerMeter; gy <= pin.y + 24 * pixelsPerMeter; gy += gridStep) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(pin.x - 24 * pixelsPerMeter, gy);
+            this.ctx.lineTo(pin.x + 24 * pixelsPerMeter, gy);
+            this.ctx.stroke();
+          }
 
-        this.ctx.fillStyle = 'rgba(0, 230, 118, 0.25)';
-        this.ctx.fill();
+          // 2. Render Putter Aim Arrow & Target Circle
+          const maxPuttDistMeters = 25;
+          const maxPuttPixels = maxPuttDistMeters * pixelsPerMeter;
+          const currentPuttPixels = maxPuttPixels * this.puttPower;
+
+          const targetX = this.ball.x + Math.cos(this.aimAngle) * currentPuttPixels;
+          const targetY = this.ball.y + Math.sin(this.aimAngle) * currentPuttPixels;
+
+          this.ctx.strokeStyle = '#ffea00';
+          this.ctx.lineWidth = 3;
+          this.ctx.setLineDash([4, 4]);
+          this.ctx.beginPath();
+          this.ctx.moveTo(this.ball.x, this.ball.y);
+          this.ctx.lineTo(targetX, targetY);
+          this.ctx.stroke();
+          this.ctx.setLineDash([]);
+
+          this.ctx.fillStyle = '#00e676';
+          this.ctx.beginPath();
+          this.ctx.arc(targetX, targetY, 6, 0, Math.PI * 2);
+          this.ctx.fill();
+          this.ctx.strokeStyle = '#ffffff';
+          this.ctx.lineWidth = 2;
+          this.ctx.stroke();
+        } else {
+          // Standard Full Aim Arrow
+          const club = this.clubManager.getCurrentClub();
+          const effDist = this.clubManager.getEffectiveDistance();
+          const targetDist = effDist * pixelsPerMeter;
+          const targetX = this.ball.x + Math.cos(this.aimAngle) * targetDist;
+          const targetY = this.ball.y + Math.sin(this.aimAngle) * targetDist;
+
+          this.ctx.strokeStyle = 'rgba(255, 235, 59, 0.85)';
+          this.ctx.lineWidth = 2;
+          this.ctx.setLineDash([6, 6]);
+          this.ctx.beginPath();
+          this.ctx.moveTo(this.ball.x, this.ball.y);
+          this.ctx.lineTo(targetX, targetY);
+          this.ctx.stroke();
+          this.ctx.setLineDash([]);
+
+          this.ctx.strokeStyle = '#00e676';
+          this.ctx.lineWidth = 2.5;
+          this.ctx.beginPath();
+          this.ctx.arc(targetX, targetY, 14, 0, Math.PI * 2);
+          this.ctx.stroke();
+
+          this.ctx.fillStyle = 'rgba(0, 230, 118, 0.25)';
+          this.ctx.fill();
+        }
       }
 
       this.ball.render(this.ctx);
     }
 
     this.camera.restoreTransform(this.ctx);
+
+    // Untransformed Canvas HUD Layer (Linear Putting Power Bar)
+    if (this.state === GAME_STATES.STRATEGY_AIM && this.isPuttingMode) {
+      const w = this.canvas.width;
+      const h = this.canvas.height;
+      const barW = 240;
+      const barH = 20;
+      const barX = (w - barW) / 2;
+      const barY = h - 95;
+
+      this.ctx.save();
+
+      this.ctx.fillStyle = 'rgba(10, 18, 36, 0.92)';
+      this.ctx.strokeStyle = '#00e676';
+      this.ctx.lineWidth = 2;
+      this.ctx.fillRect(barX - 10, barY - 26, barW + 20, barH + 34);
+      this.ctx.strokeRect(barX - 10, barY - 26, barW + 20, barH + 34);
+
+      this.ctx.font = '700 10px "Press Start 2P", monospace';
+      this.ctx.fillStyle = '#ffea00';
+      this.ctx.textAlign = 'center';
+      const puttMeters = Math.round(25 * this.puttPower);
+      this.ctx.fillText(`PUTT POWER: ${Math.round(this.puttPower * 100)}% (${puttMeters}m)`, w / 2, barY - 8);
+
+      this.ctx.fillStyle = '#101626';
+      this.ctx.strokeStyle = '#ffffff';
+      this.ctx.lineWidth = 1.5;
+      this.ctx.fillRect(barX, barY, barW, barH);
+      this.ctx.strokeRect(barX, barY, barW, barH);
+
+      this.ctx.fillStyle = this.isChargingPutt ? '#00e676' : '#ffea00';
+      this.ctx.fillRect(barX, barY, barW * this.puttPower, barH);
+
+      this.ctx.restore();
+    }
 
     if (this.state === GAME_STATES.SWING_STAGE) {
       const spriteSheet = this.assetLoader.getSophieSpriteSheet();

@@ -169,15 +169,21 @@ export class BallPhysics {
 
         const bounceVz = -this.vz * this.currentTerrain.restitution;
 
-        if (bounceVz > 1.2) {
+        if (bounceVz > 1.0) {
           this.vz = bounceVz;
-          this.vx *= this.currentTerrain.friction * this.currentRollMult;
-          this.vy *= this.currentTerrain.friction * this.currentRollMult;
+          // Apply backspin damping on wedge/pitch/flop landings
+          const backspinFactor = Math.min(0.70, 0.20 + this.currentRollMult * 0.50);
+          this.vx *= backspinFactor;
+          this.vy *= backspinFactor;
           if (audioEngine) audioEngine.playBounce(Math.min(0.5, bounceVz / 8));
         } else {
           this.vz = 0;
           this.inAir = false;
           this.isRolling = true;
+          // Soft initial landing speed dampening
+          const landingDamp = Math.min(0.65, 0.20 + this.currentRollMult * 0.45);
+          this.vx *= landingDamp;
+          this.vy *= landingDamp;
           if (audioEngine) audioEngine.playBounce(0.15);
         }
       }
@@ -196,8 +202,12 @@ export class BallPhysics {
         return;
       }
 
-      // Apply Terrain Surface Friction modified by Shot Mode Roll Multiplier
-      const rollFriction = Math.min(0.96, (this.currentTerrain.friction || 0.88) * (0.85 + this.currentRollMult * 0.15));
+      // Apply Terrain Surface Friction (putting green vs fairway vs rough)
+      let baseFriction = this.currentTerrain.friction || 0.85;
+      if (this.currentTerrain.id === 'GREEN') {
+        baseFriction = 0.92; // Controlled smooth green rolling
+      }
+      const rollFriction = Math.min(0.93, baseFriction * (0.70 + this.currentRollMult * 0.25));
       this.vx *= Math.pow(rollFriction, dt);
       this.vy *= Math.pow(rollFriction, dt);
 

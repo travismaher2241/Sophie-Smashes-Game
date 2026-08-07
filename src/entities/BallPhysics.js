@@ -78,9 +78,12 @@ export class BallPhysics {
     let maxCapMeters = club.maxDistance;
     let modePowerScale = 1.0;
 
-    if (this.currentShotTypeID === 'PITCH') {
-      maxCapMeters = Math.min(50, club.maxDistance);
-      modePowerScale = 0.70;
+    if (club.id === 'SWEDGE' && (this.currentShotTypeID === 'PITCH' || this.currentShotTypeID === 'CHIP')) {
+      maxCapMeters = 25.0;
+      modePowerScale = 1.0;
+    } else if (this.currentShotTypeID === 'PITCH') {
+      maxCapMeters = Math.min(45, club.maxDistance);
+      modePowerScale = 0.65;
     } else if (this.currentShotTypeID === 'CHIP') {
       maxCapMeters = Math.min(25, club.maxDistance);
       modePowerScale = 0.45;
@@ -107,7 +110,10 @@ export class BallPhysics {
     const totalAngle = aimAngle + intentionalShape + (snapError * 0.22) + overswingDrift + slopeAngleOffset;
 
     if (club.isPutter) {
-      // Putting ground roll
+      // Putting ground roll (Hard capped at 15m max)
+      const maxPuttMeters = 15.0;
+      const targetPuttMeters = maxPuttMeters * effectivePower;
+      const targetPixels = targetPuttMeters * pixelsPerMeter;
       const putterSpeed = (targetPixels / 45);
       this.vx = Math.cos(totalAngle) * putterSpeed;
       this.vy = Math.sin(totalAngle) * putterSpeed;

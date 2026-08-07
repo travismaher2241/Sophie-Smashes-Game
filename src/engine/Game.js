@@ -200,7 +200,7 @@ export class Game {
     this.state = GAME_STATES.STRATEGY_AIM;
     if (this.hud) {
       this.hud.hideTitleOverlay();
-      this.hud.showBanner('WELCOME TO SOPHIE SMASHES!', 'WARRAGUL COUNTRY CLUB - HOLE 1', 3000);
+      this.hud.hideBanner(); // Completely remove title banner from DOM/Canvas state!
     }
   }
 
@@ -315,7 +315,6 @@ export class Game {
     this.audioEngine.init();
 
     const club = this.clubManager.getCurrentClub();
-    // Bypasses side-view swing modal when putting or on green!
     if (this.isPuttingMode || club.isPutter) {
       this.handlePuttingClick();
       return;
@@ -339,20 +338,26 @@ export class Game {
 
   /**
    * Dedicated 2-Click Putting Input Handler:
-   * Click 1: Start putt power meter.
-   * Click 2: Lock power and IMMEDIATELY trigger putting stroke.
+   * Click 1: Starts power meter oscillation.
+   * Click 2: Locks power percentage AND IMMEDIATELY executes putt physics roll.
    */
   handlePuttingClick() {
     if (this.state !== GAME_STATES.STRATEGY_AIM) return;
 
+    const now = performance.now();
+    if (this.lastPuttingClickTime && (now - this.lastPuttingClickTime) < 220) {
+      return; // Debounce rapid clicks
+    }
+    this.lastPuttingClickTime = now;
+
     if (this.puttingState === PUTTING_STATES.IDLE) {
-      // CLICK 1: Start meter
+      // CLICK 1: Start power meter oscillation
       this.puttingState = PUTTING_STATES.CHARGING;
       this.puttPower = 0.05;
       this.puttPowerDir = 1;
       this.audioEngine.playMenuBeep();
     } else if (this.puttingState === PUTTING_STATES.CHARGING) {
-      // CLICK 2: Lock power & IMMEDIATELY trigger putt physics!
+      // CLICK 2: Lock power & IMMEDIATELY execute putt physics roll!
       this.puttingState = PUTTING_STATES.EXECUTED;
       this.firePutt();
     }
@@ -584,8 +589,11 @@ export class Game {
       }
     } else if (this.sceneManager && this.state === GAME_STATES.STRATEGY_AIM && !this.camera.isManualPanning) {
       if (this.isPuttingMode) {
-        // Zoom camera in close (1.8x zoom) on putting green surface!
-        this.camera.setTarget(this.ball.x, this.ball.y, 1.8);
+        // Zoom camera in close to 2.5x centered on midpoint between ball and cup!
+        const pin = this.sceneManager.getPinPosition();
+        const centerX = (this.ball.x + pin.x) / 2;
+        const centerY = (this.ball.y + pin.y) / 2;
+        this.camera.setTarget(centerX, centerY, 2.5);
       } else {
         const club = this.clubManager.getCurrentClub();
         const effDist = this.clubManager.getEffectiveDistance();
@@ -627,56 +635,46 @@ export class Game {
         const pixelsPerMeter = mapTotalPixelLength / officialMeters;
 
         if (this.isPuttingMode) {
-          // 1. Render Top-Down Green Grid Contour Lines
-          this.ctx.strokeStyle = 'rgba(0, 230, 118, 0.45)';
-          this.ctx.lineWidth = 1.5;
+          // 1. Render Clear Dotted Aiming Line directly from Ball to Cup
+          this.ctx.strokeStyle = 'rgba(0, 230, 118, 0.55)';
+          this.ctx.lineWidth = 2;
+          this.ctx.setLineDash([5, 5]);
+          this.ctx.beginPath();
+          this.ctx.moveTo(this.ball.x, this.ball.y);
+          this.ctx.lineTo(pin.x, pin.y);
+          this.ctx.stroke();
+          this.ctx.setLineDash([]);
 
+          // 2. Contour & Grid Lines
+          this.ctx.strokeStyle = 'rgba(0, 230, 118, 0.30)';
+          this.ctx.lineWidth = 1;
           for (let m = 2; m <= 12; m += 2) {
             this.ctx.beginPath();
             this.ctx.arc(pin.x, pin.y, m * pixelsPerMeter, 0, Math.PI * 2);
             this.ctx.stroke();
           }
 
-          // Subtle grid square lines
-          this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-          this.ctx.lineWidth = 1;
-          const gridStep = 3 * pixelsPerMeter;
-          for (let gx = pin.x - 24 * pixelsPerMeter; gx <= pin.x + 24 * pixelsPerMeter; gx += gridStep) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(gx, pin.y - 24 * pixelsPerMeter);
-            this.ctx.lineTo(gx, pin.y + 24 * pixelsPerMeter);
-            this.ctx.stroke();
-          }
-          for (let gy = pin.y - 24 * pixelsPerMeter; gy <= pin.y + 24 * pixelsPerMeter; gy += gridStep) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(pin.x - 24 * pixelsPerMeter, gy);
-            this.ctx.lineTo(pin.x + 24 * pixelsPerMeter, gy);
-            this.ctx.stroke();
-          }
-
-          // 2. Render Putter Aim Arrow & Target Circle
-          const maxPuttDistMeters = 25;
+          // 3. Active Putter Power Aim Line & Target Point (Hard 15m cap)
+          const maxPuttDistMeters = 15;
           const maxPuttPixels = maxPuttDistMeters * pixelsPerMeter;
-          const currentPuttPixels = maxPuttPixels * this.puttPower;
+          const currentPuttPixels = maxPuttPixels * (this.puttPower || 0.05);
 
           const targetX = this.ball.x + Math.cos(this.aimAngle) * currentPuttPixels;
           const targetY = this.ball.y + Math.sin(this.aimAngle) * currentPuttPixels;
 
           this.ctx.strokeStyle = '#ffea00';
-          this.ctx.lineWidth = 3;
-          this.ctx.setLineDash([4, 4]);
+          this.ctx.lineWidth = 3.5;
           this.ctx.beginPath();
           this.ctx.moveTo(this.ball.x, this.ball.y);
           this.ctx.lineTo(targetX, targetY);
           this.ctx.stroke();
-          this.ctx.setLineDash([]);
 
           this.ctx.fillStyle = '#00e676';
           this.ctx.beginPath();
-          this.ctx.arc(targetX, targetY, 6, 0, Math.PI * 2);
+          this.ctx.arc(targetX, targetY, 5, 0, Math.PI * 2);
           this.ctx.fill();
           this.ctx.strokeStyle = '#ffffff';
-          this.ctx.lineWidth = 2;
+          this.ctx.lineWidth = 1.5;
           this.ctx.stroke();
         } else {
           // Standard Full Aim Arrow

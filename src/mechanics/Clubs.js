@@ -53,49 +53,51 @@ export const CLUBS = [
   { id: 'GWEDGE',   name: 'GAP WEDGE (GW)',   maxDistance: 70, loft: 50, rollFactor: 0.35 },
   { id: 'SWEDGE',   name: 'SAND WEDGE (SW)',  maxDistance: 50, loft: 54, rollFactor: 0.25 },
   { id: 'LWEDGE',   name: 'LOB WEDGE (LW)',   maxDistance: 35, loft: 58, rollFactor: 0.10 },
-  { id: 'PUTTER',   name: 'PUTTER (PT)',      maxDistance: 25, loft: 0,  rollFactor: 1.5, isPutter: true }
+  { id: 'PUTTER',   name: 'PUTTER (PT)',      maxDistance: 15, loft: 0,  rollFactor: 1.5, isPutter: true }
 ];
 
 export class ClubManager {
   constructor() {
-    this.currentClubIndex = 0;
-    this.currentShotTypeIndex = 0;
+    this.clubs = CLUBS;
+    this.currentClubIndex = 0; // Starts with Driver
+    this.shotTypes = SHOT_TYPES;
+    this.currentShotTypeIndex = 0; // Starts with FULL
   }
 
   getCurrentClub() {
-    return CLUBS[this.currentClubIndex];
+    return this.clubs[this.currentClubIndex];
   }
 
   getCurrentShotType() {
-    return SHOT_TYPES[this.currentShotTypeIndex];
+    return this.shotTypes[this.currentShotTypeIndex];
   }
 
   nextClub() {
-    this.currentClubIndex = (this.currentClubIndex + 1) % CLUBS.length;
+    this.currentClubIndex = (this.currentClubIndex + 1) % this.clubs.length;
     return this.getCurrentClub();
   }
 
   prevClub() {
-    this.currentClubIndex = (this.currentClubIndex - 1 + CLUBS.length) % CLUBS.length;
+    this.currentClubIndex = (this.currentClubIndex - 1 + this.clubs.length) % this.clubs.length;
     return this.getCurrentClub();
   }
 
-  nextShotType() {
-    this.currentShotTypeIndex = (this.currentShotTypeIndex + 1) % SHOT_TYPES.length;
-    return this.getCurrentShotType();
-  }
-
-  prevShotType() {
-    this.currentShotTypeIndex = (this.currentShotTypeIndex - 1 + SHOT_TYPES.length) % SHOT_TYPES.length;
-    return this.getCurrentShotType();
-  }
-
   selectClubById(id) {
-    const idx = CLUBS.findIndex(c => c.id === id);
+    const idx = this.clubs.findIndex(c => c.id === id);
     if (idx !== -1) {
       this.currentClubIndex = idx;
     }
     return this.getCurrentClub();
+  }
+
+  nextShotType() {
+    this.currentShotTypeIndex = (this.currentShotTypeIndex + 1) % this.shotTypes.length;
+    return this.getCurrentShotType();
+  }
+
+  prevShotType() {
+    this.currentShotTypeIndex = (this.currentShotTypeIndex - 1 + this.shotTypes.length) % this.shotTypes.length;
+    return this.getCurrentShotType();
   }
 
   selectShotTypeById(id) {
@@ -109,13 +111,16 @@ export class ClubManager {
   getEffectiveDistance() {
     const club = this.getCurrentClub();
     const shotType = this.getCurrentShotType();
-    if (club.isPutter) return club.maxDistance;
+    if (club.isPutter) return 15;
 
     let maxCap = club.maxDistance;
     let mult = 1.0;
+    if (club.id === 'SWEDGE' && (shotType.id === 'PITCH' || shotType.id === 'CHIP')) {
+      return 25; // Hard 25m cap for Sand Wedge Pitch/Chip
+    }
     if (shotType.id === 'PITCH') {
-      maxCap = Math.min(50, club.maxDistance);
-      mult = 0.70;
+      maxCap = Math.min(45, club.maxDistance);
+      mult = 0.65;
     } else if (shotType.id === 'CHIP') {
       maxCap = Math.min(25, club.maxDistance);
       mult = 0.45;

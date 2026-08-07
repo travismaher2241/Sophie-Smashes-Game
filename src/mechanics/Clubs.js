@@ -110,7 +110,20 @@ export class ClubManager {
     const club = this.getCurrentClub();
     const shotType = this.getCurrentShotType();
     if (club.isPutter) return club.maxDistance;
-    return Math.round(club.maxDistance * shotType.distMult);
+
+    let maxCap = club.maxDistance;
+    let mult = 1.0;
+    if (shotType.id === 'PITCH') {
+      maxCap = Math.min(50, club.maxDistance);
+      mult = 0.70;
+    } else if (shotType.id === 'CHIP') {
+      maxCap = Math.min(25, club.maxDistance);
+      mult = 0.45;
+    } else if (shotType.id === 'FLOP') {
+      maxCap = Math.min(20, club.maxDistance);
+      mult = 0.35;
+    }
+    return Math.round(maxCap * mult);
   }
 
   /**

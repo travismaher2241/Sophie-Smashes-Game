@@ -19,6 +19,12 @@ export const GAME_STATES = {
   HOLE_COMPLETE: 'HOLE_COMPLETE'
 };
 
+export const PUTTING_STATES = {
+  IDLE: 'IDLE',
+  CHARGING: 'CHARGING',
+  EXECUTED: 'EXECUTED'
+};
+
 export class Game {
   constructor(canvasId) {
     this.canvas = document.getElementById(canvasId);
@@ -55,8 +61,8 @@ export class Game {
     // Shot aim & Putting properties
     this.aimAngle = -Math.PI / 2;
     this.isPuttingMode = false;
-    this.isChargingPutt = false;
-    this.puttPower = 0.5;
+    this.puttingState = PUTTING_STATES.IDLE;
+    this.puttPower = 0.0;
     this.puttPowerDir = 1;
     this.isDraggingPutt = false;
     this.dragStartPx = { x: 0, y: 0 };
@@ -246,9 +252,9 @@ export class Game {
           const dx = clientPos.x - this.dragStartPx.x;
           const dy = clientPos.y - this.dragStartPx.y;
           const dist = Math.hypot(dx, dy);
-          if (dist > 5) {
+          if (dist > 6) {
             this.aimAngle = Math.atan2(dy, dx);
-            this.puttPower = Math.min(1.0, Math.max(0.1, dist / 110));
+            this.puttPower = Math.min(1.0, Math.max(0.05, dist / 110));
           }
         } else if (this.isDraggingMap) {
           const dx = clientPos.x - this.dragStartX;
@@ -263,7 +269,7 @@ export class Game {
     const onDragEnd = () => {
       if (this.isDraggingPutt) {
         this.isDraggingPutt = false;
-        if (this.puttPower > 0.15) {
+        if (this.puttPower > 0.12) {
           this.firePutt();
         }
       }
@@ -311,7 +317,7 @@ export class Game {
     const club = this.clubManager.getCurrentClub();
     // Bypasses side-view swing modal when putting or on green!
     if (this.isPuttingMode || club.isPutter) {
-      this.handlePuttTrigger();
+      this.handlePuttingClick();
       return;
     }
 
@@ -331,20 +337,32 @@ export class Game {
     }
   }
 
-  handlePuttTrigger() {
-    if (!this.isChargingPutt) {
-      this.isChargingPutt = true;
-      this.puttPower = 0.15;
+  /**
+   * Dedicated 2-Click Putting Input Handler:
+   * Click 1: Start putt power meter.
+   * Click 2: Lock power and IMMEDIATELY trigger putting stroke.
+   */
+  handlePuttingClick() {
+    if (this.state !== GAME_STATES.STRATEGY_AIM) return;
+
+    if (this.puttingState === PUTTING_STATES.IDLE) {
+      // CLICK 1: Start meter
+      this.puttingState = PUTTING_STATES.CHARGING;
+      this.puttPower = 0.05;
       this.puttPowerDir = 1;
       this.audioEngine.playMenuBeep();
-    } else {
+    } else if (this.puttingState === PUTTING_STATES.CHARGING) {
+      // CLICK 2: Lock power & IMMEDIATELY trigger putt physics!
+      this.puttingState = PUTTING_STATES.EXECUTED;
       this.firePutt();
     }
   }
 
   firePutt() {
-    this.isChargingPutt = false;
-    this.isDraggingPutt = false;
+    this.audioEngine.init();
+    const lockedPower = Math.min(1.0, Math.max(0.05, this.puttPower));
+    this.puttPower = lockedPower;
+
     const club = this.clubManager.selectClubById('PUTTER');
     const shotType = this.clubManager.selectShotTypeById('FULL');
 
@@ -358,7 +376,7 @@ export class Game {
       club: club,
       shotType: shotType,
       intentionalShape: 0,
-      powerInput: this.puttPower,
+      powerInput: lockedPower,
       snapError: 0,
       overswingPenalty: 0,
       terrainLie: { powerFactor: 1.0, loftFactor: 1.0 },
@@ -381,7 +399,7 @@ export class Game {
       this.startGameFromTitle();
     } else if (this.state === GAME_STATES.STRATEGY_AIM) {
       if (this.isPuttingMode || this.clubManager.getCurrentClub().isPutter) {
-        this.handlePuttTrigger();
+        this.handlePuttingClick();
       } else {
         this.openSwingOverlay();
         this.swingMeter.handleClick();
@@ -413,8 +431,9 @@ export class Game {
     this.swingMeter.reset();
     this.closeSwingOverlay();
     this.isPuttingMode = false;
-    this.isChargingPutt = false;
-    this.hud.setSwingButtonText('SWING [SPACEBAR]');
+    this.puttingState = PUTTING_STATES.IDLE;
+    this.puttPower = 0.0;
+    this.hud.setSwingButtonText('SWING');
 
     if (this.state !== GAME_STATES.TITLE_SCREEN) {
       this.state = GAME_STATES.STRATEGY_AIM;
@@ -447,7 +466,9 @@ export class Game {
     if (this.state !== GAME_STATES.STRATEGY_AIM) return;
     const club = dir > 0 ? this.clubManager.nextClub() : this.clubManager.prevClub();
     this.isPuttingMode = club.isPutter;
-    this.hud.setSwingButtonText(this.isPuttingMode ? 'PUTT [SPACE]' : 'SWING [SPACEBAR]');
+    this.puttingState = PUTTING_STATES.IDLE;
+    this.puttPower = 0.0;
+    this.hud.setSwingButtonText(this.isPuttingMode ? 'PUTT' : 'SWING');
     this.hud.updateClubInfo(club, this.clubManager.getEffectiveDistance());
     this.audioEngine.playMenuBeep();
   }
@@ -473,8 +494,9 @@ export class Game {
     this.swingMeter.reset();
     this.closeSwingOverlay();
     this.isPuttingMode = false;
-    this.isChargingPutt = false;
-    this.hud.setSwingButtonText('SWING [SPACEBAR]');
+    this.puttingState = PUTTING_STATES.IDLE;
+    this.puttPower = 0.0;
+    this.hud.setSwingButtonText('SWING');
     this.state = GAME_STATES.STRATEGY_AIM;
   }
 
@@ -485,13 +507,13 @@ export class Game {
       this.player.update();
     }
 
-    if (this.isChargingPutt && this.state === GAME_STATES.STRATEGY_AIM) {
-      this.puttPower += 0.022 * this.puttPowerDir;
+    if (this.puttingState === PUTTING_STATES.CHARGING && this.state === GAME_STATES.STRATEGY_AIM) {
+      this.puttPower += 0.018 * this.puttPowerDir;
       if (this.puttPower >= 1.0) {
         this.puttPower = 1.0;
         this.puttPowerDir = -1;
-      } else if (this.puttPower <= 0.08) {
-        this.puttPower = 0.08;
+      } else if (this.puttPower <= 0.05) {
+        this.puttPower = 0.05;
         this.puttPowerDir = 1;
       }
     }
@@ -505,7 +527,7 @@ export class Game {
 
       this.camera.setTarget(this.ball.x, this.ball.y, 0.95);
 
-      // Hole Completion ONLY triggers when ball enters cup radius!
+      // Hole Completion ONLY triggers when ball enters cup radius on green!
       if (this.flagstick.checkBallInCup(this.ball)) {
         this.audioEngine.playCupSink();
         this.state = GAME_STATES.HOLE_COMPLETE;
@@ -539,15 +561,20 @@ export class Game {
 
           if (this.ball.currentTerrain.id === 'GREEN' || remainingDist <= 12) {
             this.isPuttingMode = true;
+            this.puttingState = PUTTING_STATES.IDLE;
+            this.puttPower = 0.0;
+            this.swingOverlay.hide();
             this.clubManager.selectClubById('PUTTER');
             this.clubManager.selectShotTypeById('FULL');
             this.hud.updateClubInfo(this.clubManager.getCurrentClub(), this.clubManager.getEffectiveDistance());
             this.hud.updateShotTypeInfo(this.clubManager.getCurrentShotType());
-            this.hud.setSwingButtonText('PUTT [SPACE]');
+            this.hud.setSwingButtonText('PUTT');
             this.hud.showBanner('ON THE GREEN!', 'USE TOP-DOWN PUTTING VIEW TO HOLE IN', 2200);
           } else {
             this.isPuttingMode = false;
-            this.hud.setSwingButtonText('SWING [SPACEBAR]');
+            this.puttingState = PUTTING_STATES.IDLE;
+            this.puttPower = 0.0;
+            this.hud.setSwingButtonText('SWING');
             const recommended = this.clubManager.autoSelectBestClub(remainingDist, this.ball.currentTerrain);
             this.hud.updateClubInfo(recommended.club, this.clubManager.getEffectiveDistance());
             this.hud.updateShotTypeInfo(recommended.shotType);
@@ -557,8 +584,8 @@ export class Game {
       }
     } else if (this.sceneManager && this.state === GAME_STATES.STRATEGY_AIM && !this.camera.isManualPanning) {
       if (this.isPuttingMode) {
-        // Keep camera zoomed in close (1.7x zoom) focused on Top-Down Green Grid!
-        this.camera.setTarget(this.ball.x, this.ball.y, 1.7);
+        // Zoom camera in close (1.8x zoom) on putting green surface!
+        this.camera.setTarget(this.ball.x, this.ball.y, 1.8);
       } else {
         const club = this.clubManager.getCurrentClub();
         const effDist = this.clubManager.getEffectiveDistance();
@@ -701,11 +728,18 @@ export class Game {
       this.ctx.fillRect(barX - 10, barY - 26, barW + 20, barH + 34);
       this.ctx.strokeRect(barX - 10, barY - 26, barW + 20, barH + 34);
 
-      this.ctx.font = '700 10px "Press Start 2P", monospace';
+      this.ctx.font = '700 9px "Press Start 2P", monospace';
       this.ctx.fillStyle = '#ffea00';
       this.ctx.textAlign = 'center';
-      const puttMeters = Math.round(25 * this.puttPower);
-      this.ctx.fillText(`PUTT POWER: ${Math.round(this.puttPower * 100)}% (${puttMeters}m)`, w / 2, barY - 8);
+      const puttMeters = Math.round(25 * (this.puttPower || 0.05));
+
+      let hintText = `PUTT POWER: ${Math.round(this.puttPower * 100)}% (${puttMeters}m)`;
+      if (this.puttingState === PUTTING_STATES.IDLE) {
+        hintText = 'CLICK 1: START PUTT METER';
+      } else if (this.puttingState === PUTTING_STATES.CHARGING) {
+        hintText = `CLICK 2: LOCK POWER (${Math.round(this.puttPower * 100)}%)`;
+      }
+      this.ctx.fillText(hintText, w / 2, barY - 8);
 
       this.ctx.fillStyle = '#101626';
       this.ctx.strokeStyle = '#ffffff';
@@ -713,7 +747,7 @@ export class Game {
       this.ctx.fillRect(barX, barY, barW, barH);
       this.ctx.strokeRect(barX, barY, barW, barH);
 
-      this.ctx.fillStyle = this.isChargingPutt ? '#00e676' : '#ffea00';
+      this.ctx.fillStyle = (this.puttingState === PUTTING_STATES.CHARGING) ? '#00e676' : '#ffea00';
       this.ctx.fillRect(barX, barY, barW * this.puttPower, barH);
 
       this.ctx.restore();

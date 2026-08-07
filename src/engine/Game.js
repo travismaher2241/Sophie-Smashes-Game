@@ -339,7 +339,7 @@ export class Game {
   /**
    * Dedicated 2-Click Putting Input Handler:
    * Click 1: Starts power meter oscillation.
-   * Click 2: Locks power percentage AND IMMEDIATELY executes putt physics roll.
+   * Click 2: Locks power percentage, pauses 0.5s to show final locked bar, then executes putt physics.
    */
   handlePuttingClick() {
     if (this.state !== GAME_STATES.STRATEGY_AIM) return;
@@ -357,9 +357,13 @@ export class Game {
       this.puttPowerDir = 1;
       this.audioEngine.playMenuBeep();
     } else if (this.puttingState === PUTTING_STATES.CHARGING) {
-      // CLICK 2: Lock power & IMMEDIATELY execute putt physics roll!
+      // CLICK 2: Lock power percentage & pause 0.5s to display locked power bar!
       this.puttingState = PUTTING_STATES.EXECUTED;
-      this.firePutt();
+      this.audioEngine.playMenuBeep();
+
+      setTimeout(() => {
+        this.firePutt();
+      }, 500); // 0.5 second putting meter lock delay!
     }
   }
 
@@ -438,6 +442,7 @@ export class Game {
     this.isPuttingMode = false;
     this.puttingState = PUTTING_STATES.IDLE;
     this.puttPower = 0.0;
+    this.isRestingPauseActive = false;
     this.hud.setSwingButtonText('SWING');
 
     if (this.state !== GAME_STATES.TITLE_SCREEN) {
@@ -458,7 +463,7 @@ export class Game {
     this.hud.updateClubInfo(this.clubManager.getCurrentClub(), this.clubManager.getEffectiveDistance());
     this.hud.updateShotTypeInfo(this.clubManager.getCurrentShotType());
     this.hud.updateWind(this.wind.speed, this.wind.dirAngle);
-    this.hud.showBanner(`HOLE ${meta.hole}: WARRAGUL COUNTRY CLUB`, `PAR ${meta.par} - ${meta.meters || distMeters}m`);
+    this.hud.showBanner(`HOLE ${meta.hole}: WARRAGUL COUNTRY CLUB`, `PAR ${meta.par} - ${meta.meters || distMeters}m`, 2500);
   }
 
   adjustAim(deltaAngle) {
@@ -501,8 +506,60 @@ export class Game {
     this.isPuttingMode = false;
     this.puttingState = PUTTING_STATES.IDLE;
     this.puttPower = 0.0;
+    this.isRestingPauseActive = false;
     this.hud.setSwingButtonText('SWING');
     this.state = GAME_STATES.STRATEGY_AIM;
+  }
+
+  processBallLandingRest() {
+    if (!this.sceneManager) return;
+
+    if (this.ball.inHazard) {
+      this.hud.showBanner('WATER HAZARD!', '+1 PENALTY STROKE', 2500);
+      setTimeout(() => this.resetCurrentShot(), 1200);
+      return;
+    }
+
+    const par = this.sceneManager.currentMetadata?.par || 4;
+    const maxStrokes = par * 2;
+    if (this.sceneManager.currentHoleStrokes >= maxStrokes) {
+      this.audioEngine.playMenuBeep();
+      this.state = GAME_STATES.HOLE_COMPLETE;
+      this.hud.showBanner('DOUBLE PAR LIMIT REACHED', `HOLE COMPLETED IN ${maxStrokes} STROKES`, 3000);
+      return;
+    }
+
+    this.player.setPosition(this.ball.x - 12, this.ball.y);
+    const pin = this.sceneManager.getPinPosition();
+    this.aimAngle = Math.atan2(pin.y - this.ball.y, pin.x - this.ball.x);
+    this.player.setAimAngle(this.aimAngle);
+    this.player.resetToAddress();
+    this.swingMeter.reset();
+    this.state = GAME_STATES.STRATEGY_AIM;
+
+    const remainingDist = this.sceneManager.calculateDistanceToPinInMeters(this.ball.x, this.ball.y);
+
+    if (this.ball.currentTerrain.id === 'GREEN' || remainingDist <= 12) {
+      this.isPuttingMode = true;
+      this.puttingState = PUTTING_STATES.IDLE;
+      this.puttPower = 0.0;
+      this.swingOverlay.hide();
+      this.clubManager.selectClubById('PUTTER');
+      this.clubManager.selectShotTypeById('FULL');
+      this.hud.updateClubInfo(this.clubManager.getCurrentClub(), this.clubManager.getEffectiveDistance());
+      this.hud.updateShotTypeInfo(this.clubManager.getCurrentShotType());
+      this.hud.setSwingButtonText('PUTT');
+      this.hud.showBanner('ON THE GREEN!', 'USE TOP-DOWN PUTTING VIEW TO HOLE IN', 2500);
+    } else {
+      this.isPuttingMode = false;
+      this.puttingState = PUTTING_STATES.IDLE;
+      this.puttPower = 0.0;
+      this.hud.setSwingButtonText('SWING');
+      const recommended = this.clubManager.autoSelectBestClub(remainingDist, this.ball.currentTerrain);
+      this.hud.updateClubInfo(recommended.club, this.clubManager.getEffectiveDistance());
+      this.hud.updateShotTypeInfo(recommended.shotType);
+      this.hud.showShotPopup(`CADDIE: ${recommended.club.name} AUTO-SELECTED`, 2200);
+    }
   }
 
   update() {
@@ -539,53 +596,13 @@ export class Game {
         this.hud.showBanner('HOLE COMPLETE!', 'PRESS SPACE FOR NEXT HOLE', 0);
       }
 
-      if (!this.ball.inAir && !this.ball.isRolling && !this.ball.isHoled) {
-        if (this.ball.inHazard) {
-          this.hud.showBanner('WATER HAZARD!', '+1 PENALTY STROKE', 2500);
-          setTimeout(() => this.resetCurrentShot(), 1200);
-        } else {
-          // Double-Par Limit Check
-          const par = this.sceneManager.currentMetadata?.par || 4;
-          const maxStrokes = par * 2;
-          if (this.sceneManager.currentHoleStrokes >= maxStrokes) {
-            this.audioEngine.playMenuBeep();
-            this.state = GAME_STATES.HOLE_COMPLETE;
-            this.hud.showBanner('DOUBLE PAR LIMIT REACHED', `HOLE COMPLETED IN ${maxStrokes} STROKES`, 0);
-            return;
-          }
-
-          this.player.setPosition(this.ball.x - 12, this.ball.y);
-          const pin = this.sceneManager.getPinPosition();
-          this.aimAngle = Math.atan2(pin.y - this.ball.y, pin.x - this.ball.x);
-          this.player.setAimAngle(this.aimAngle);
-          this.player.resetToAddress();
-          this.swingMeter.reset();
-          this.state = GAME_STATES.STRATEGY_AIM;
-
-          const remainingDist = this.sceneManager.calculateDistanceToPinInMeters(this.ball.x, this.ball.y);
-
-          if (this.ball.currentTerrain.id === 'GREEN' || remainingDist <= 12) {
-            this.isPuttingMode = true;
-            this.puttingState = PUTTING_STATES.IDLE;
-            this.puttPower = 0.0;
-            this.swingOverlay.hide();
-            this.clubManager.selectClubById('PUTTER');
-            this.clubManager.selectShotTypeById('FULL');
-            this.hud.updateClubInfo(this.clubManager.getCurrentClub(), this.clubManager.getEffectiveDistance());
-            this.hud.updateShotTypeInfo(this.clubManager.getCurrentShotType());
-            this.hud.setSwingButtonText('PUTT');
-            this.hud.showBanner('ON THE GREEN!', 'USE TOP-DOWN PUTTING VIEW TO HOLE IN', 2200);
-          } else {
-            this.isPuttingMode = false;
-            this.puttingState = PUTTING_STATES.IDLE;
-            this.puttPower = 0.0;
-            this.hud.setSwingButtonText('SWING');
-            const recommended = this.clubManager.autoSelectBestClub(remainingDist, this.ball.currentTerrain);
-            this.hud.updateClubInfo(recommended.club, this.clubManager.getEffectiveDistance());
-            this.hud.updateShotTypeInfo(recommended.shotType);
-            this.hud.showShotPopup(`CADDIE: ${recommended.club.name} AUTO-SELECTED`, 1800);
-          }
-        }
+      // Forced 1.5-second Ball Landing Pause sitting on the resting ball!
+      if (!this.ball.inAir && !this.ball.isRolling && !this.ball.isHoled && !this.isRestingPauseActive) {
+        this.isRestingPauseActive = true;
+        setTimeout(() => {
+          this.isRestingPauseActive = false;
+          this.processBallLandingRest();
+        }, 1500); // 1.5 second landing pause!
       }
     } else if (this.sceneManager && this.state === GAME_STATES.STRATEGY_AIM && !this.camera.isManualPanning) {
       if (this.isPuttingMode) {

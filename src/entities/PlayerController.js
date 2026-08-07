@@ -58,6 +58,7 @@ export class PlayerController {
     this.currentFrame = 4; // Frame 4: Downswing transition
     this.frameTimer = 0;
     this.impactFired = false;
+    this.swingCompleteFired = false;
   }
 
   resetToAddress() {
@@ -66,6 +67,7 @@ export class PlayerController {
     this.currentFrame = 0;
     this.frameTimer = 0;
     this.impactFired = false;
+    this.swingCompleteFired = false;
   }
 
   update(dt = 1) {
@@ -110,8 +112,11 @@ export class PlayerController {
       if (this.currentFrame >= 7) {
         this.currentFrame = 7; // Hold follow-through pose
         this.isPlayingSwing = false;
-        if (this.onSwingComplete) {
-          this.onSwingComplete();
+        if (this.onSwingComplete && !this.swingCompleteFired) {
+          this.swingCompleteFired = true;
+          setTimeout(() => {
+            if (this.onSwingComplete) this.onSwingComplete();
+          }, 1000); // Forced 1.0 second follow-through hold BEFORE closing overlay!
         }
       }
     }

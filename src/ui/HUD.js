@@ -180,31 +180,40 @@ export class HUD {
     if (this.bannerSubtitle) this.bannerSubtitle.innerText = subtitle;
     this.gameBanner.classList.remove('hidden');
 
-    if (duration > 0) {
-      setTimeout(() => {
+    const displayTime = Math.max(2200, duration);
+    if (displayTime > 0) {
+      clearTimeout(this.bannerTimeout);
+      this.bannerTimeout = setTimeout(() => {
         this.gameBanner.classList.add('hidden');
-      }, duration);
+      }, displayTime);
     }
   }
 
-  showShotPopup(text, duration = 1800) {
-    if (this.shotResultText) this.shotResultText.innerText = text;
-    this.shotPopup.classList.remove('hidden');
-    setTimeout(() => {
-      this.shotPopup.classList.add('hidden');
-    }, duration);
+  hideBanner() {
+    if (this.gameBanner) this.gameBanner.classList.add('hidden');
   }
 
-  showSmashEffect(duration = 1000) {
+  showShotPopup(text, duration = 2200) {
+    if (this.shotResultText) this.shotResultText.innerText = text;
+    this.shotPopup.classList.remove('hidden');
+
+    const displayTime = Math.max(2200, duration);
+    clearTimeout(this.shotPopupTimeout);
+    this.shotPopupTimeout = setTimeout(() => {
+      this.shotPopup.classList.add('hidden');
+    }, displayTime);
+  }
+
+  showSmashEffect(duration = 2000) {
     if (!this.smashEffect) return;
-    // Toggling display via the 'hidden' class (rather than just leaving it shown)
-    // is what restarts the CSS animations on repeat perfect shots.
     this.smashEffect.classList.add('hidden');
-    void this.smashEffect.offsetWidth; // force reflow before re-showing
+    void this.smashEffect.offsetWidth; // force reflow
     this.smashEffect.classList.remove('hidden');
+
+    const displayTime = Math.max(2000, duration);
     clearTimeout(this.smashEffectTimeout);
     this.smashEffectTimeout = setTimeout(() => {
       this.smashEffect.classList.add('hidden');
-    }, duration);
+    }, displayTime);
   }
 }

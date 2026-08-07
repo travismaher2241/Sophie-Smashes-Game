@@ -140,7 +140,12 @@ export class BallPhysics {
       if (this.currentShotTypeID === 'FLOP') flightTime = 42;
 
       this.vz = (flightTime / 2) * this.gravity;
-      const requiredVGround = carryPixels / flightTime;
+
+      // Ground speed decays by airDrag every frame in flight (see update() below),
+      // so a naive carryPixels/flightTime launch speed under-delivers the intended
+      // carry distance - scale up to compensate for that decay (geometric series sum).
+      const dragDecaySum = (1 - Math.pow(this.airDrag, flightTime)) / (1 - this.airDrag);
+      const requiredVGround = carryPixels / dragDecaySum;
 
       this.vx = Math.cos(totalAngle) * requiredVGround;
       this.vy = Math.sin(totalAngle) * requiredVGround;

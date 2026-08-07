@@ -12,7 +12,11 @@
   --snes-blue: #29b6f6;
   --snes-red: #ff3d00;
   --snes-purple: #ab47bc;
-  
+
+  --snes-pink: #ff2d95;
+  --snes-pink-light: #ff8ac0;
+  --snes-pink-dark: #b0125f;
+
   --text-main: #f0f4f8;
   --text-muted: #8a99b5;
   
@@ -592,7 +596,97 @@ html, body {
   gap: 4px;
 }
 
+/* Perfect Shot Celebration: Large Pink "SMASHED IT!" Explosion */
+.smash-effect {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+  z-index: 25;
+}
+
+.smash-effect.hidden {
+  display: none;
+}
+
+.smash-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  margin: -20px 0 0 -20px;
+  border: 6px solid var(--snes-pink);
+  border-radius: 50%;
+  box-shadow: 0 0 30px var(--snes-pink-light), 0 0 60px var(--snes-pink);
+  transform: scale(0.3);
+  opacity: 1;
+  animation: smashRingBurst 0.6s ease-out forwards;
+}
+
+.smash-ring-2 {
+  border-color: var(--snes-pink-light);
+  animation-delay: 0.08s;
+}
+
+@keyframes smashRingBurst {
+  0% { transform: scale(0.3); opacity: 1; }
+  100% { transform: scale(9); opacity: 0; }
+}
+
+.smash-particle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  background: var(--snes-pink);
+  box-shadow: 0 0 8px var(--snes-pink-light);
+  animation: smashParticleFly 0.75s ease-out forwards;
+}
+
+.smash-particle:nth-of-type(3n) {
+  background: var(--snes-pink-light);
+}
+
+.smash-particle:nth-of-type(4n) {
+  background: #ffffff;
+}
+
+@keyframes smashParticleFly {
+  0% { transform: rotate(var(--angle)) translateX(0) rotate(calc(var(--angle) * -1)) scale(1); opacity: 1; }
+  100% { transform: rotate(var(--angle)) translateX(150px) rotate(calc(var(--angle) * -1)) scale(0.2); opacity: 0; }
+}
+
+.smash-text {
+  position: relative;
+  font-family: var(--font-retro);
+  font-size: 30px;
+  color: var(--snes-pink-light);
+  text-shadow: 4px 4px 0 #000, -2px -2px 0 var(--snes-pink-dark), 0 0 30px var(--snes-pink);
+  letter-spacing: 2px;
+  z-index: 2;
+  animation: smashTextPop 0.9s cubic-bezier(.34, 1.56, .64, 1) forwards;
+}
+
+@keyframes smashTextPop {
+  0% { transform: scale(0) rotate(-8deg); opacity: 0; }
+  40% { transform: scale(1.25) rotate(4deg); opacity: 1; }
+  60% { transform: scale(0.95) rotate(-2deg); }
+  80% { transform: scale(1.05) rotate(1deg); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
 @media (max-width: 768px) {
+  .smash-text {
+    font-size: 20px;
+  }
   .title-card-container {
     padding: 20px 14px;
   }

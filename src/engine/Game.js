@@ -344,9 +344,13 @@ export class Game {
   handlePuttingClick() {
     if (this.state !== GAME_STATES.STRATEGY_AIM) return;
 
+    // Debounce only guards against a single physical tap synthesizing two events
+    // (e.g. touchstart + click) - it must stay well under normal human double-click
+    // speed, or a real deliberate "click 1, click 2" putt gets silently swallowed
+    // and puttingState gets stuck at CHARGING forever with the ball never firing.
     const now = performance.now();
-    if (this.lastPuttingClickTime && (now - this.lastPuttingClickTime) < 220) {
-      return; // Debounce rapid clicks
+    if (this.lastPuttingClickTime && (now - this.lastPuttingClickTime) < 60) {
+      return;
     }
     this.lastPuttingClickTime = now;
 

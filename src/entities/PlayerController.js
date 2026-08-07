@@ -110,13 +110,13 @@ export class PlayerController {
       }
 
       if (this.currentFrame >= 7) {
-        this.currentFrame = 7; // Hold follow-through pose
+        this.currentFrame = 7; // Hold high follow-through pose
         this.isPlayingSwing = false;
         if (this.onSwingComplete && !this.swingCompleteFired) {
           this.swingCompleteFired = true;
           setTimeout(() => {
             if (this.onSwingComplete) this.onSwingComplete();
-          }, 1000); // Forced 1.0 second follow-through hold BEFORE closing overlay!
+          }, 1200); // Forced 1.2 seconds follow-through hold BEFORE closing overlay!
         }
       }
     }

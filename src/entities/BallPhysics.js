@@ -104,10 +104,13 @@ export class BallPhysics {
     const carryMeters = targetTotalMeters * carryRatio;
     const carryPixels = carryMeters * pixelsPerMeter;
 
-    // 3. Final Shot Angle (Hook/Slice curve applied strictly on snapError)
+    // 3. Final Shot Angle & Side-Spin Aerodynamic Curvature (Hook/Slice)
     const overswingDrift = (Math.random() - 0.5) * overswingPenalty * 0.08;
     const slopeAngleOffset = (slope.x * 0.03);
-    const totalAngle = aimAngle + intentionalShape + (snapError * 0.22) + overswingDrift + slopeAngleOffset;
+    const totalAngle = aimAngle + intentionalShape + (snapError * 0.18) + overswingDrift + slopeAngleOffset;
+
+    // Side-spin curve force (Negative snapError = HOOK left, Positive snapError = SLICE right)
+    this.curveSpinForce = (snapError * 0.12);
 
     if (club.isPutter) {
       // Putting ground roll (Hard capped at 15m max)
@@ -154,14 +157,23 @@ export class BallPhysics {
       return;
     }
 
-    if (this.inAir && Math.random() < 0.35 * dt) {
+    if (this.inAir) {
       this.trail.push({ x: this.x, y: this.y, z: this.z });
-      if (this.trail.length > 30) this.trail.shift();
+      if (this.trail.length > 60) this.trail.shift();
     }
 
     if (this.inAir) {
       this.vx *= Math.pow(this.airDrag, dt);
       this.vy *= Math.pow(this.airDrag, dt);
+
+      // Dynamic Magnus Aerodynamic Side-Spin Curvature (Hook/Slice curve)
+      if (this.curveSpinForce && Math.abs(this.curveSpinForce) > 0.005) {
+        const heading = Math.atan2(this.vy, this.vx);
+        const perpAngle = heading + Math.PI / 2;
+        const spinPush = this.curveSpinForce * (this.z / 45) * dt;
+        this.vx += Math.cos(perpAngle) * spinPush;
+        this.vy += Math.sin(perpAngle) * spinPush;
+      }
 
       // Scaled wind effect (gentle impact on short game shots)
       const windFactor = (this.currentShotTypeID === 'FULL') ? 0.004 : 0.001;

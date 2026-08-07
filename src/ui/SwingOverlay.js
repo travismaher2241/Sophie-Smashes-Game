@@ -264,21 +264,7 @@ export class SwingOverlay {
     ctx.fillRect(w * 0.32 - 12, groundY - 6, 8, 6);
     ctx.fillRect(w * 0.32 + 35, groundY - 6, 8, 6);
 
-    // 3. Render Large Side Profile Golf Ball on Turf
-    const ballX = w * 0.32 + 10;
-    const ballY = groundY - 4;
-
-    if (player.animState !== 'IMPACT' && player.animState !== 'FOLLOW_THROUGH') {
-      ctx.fillStyle = 'rgba(0,0,0,0.4)';
-      ctx.beginPath();
-      ctx.ellipse(ballX, groundY + 1, 6, 3, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(ballX, ballY, 5, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    // 3. (Ball is rendered directly as part of Sophie's clubhead address point in sprite sheet)
 
     // 4. Render Large Prominent Sophie 16-Bit Player Sprite (Strict Uniform Bounding Box)
     const playerX = w * 0.32 - 45;
@@ -290,14 +276,21 @@ export class SwingOverlay {
     ctx.translate(playerX, playerY);
 
     if (spriteSheet) {
-      const meta = spriteMeta || { cols: 4, rows: 2, frameWidth: 1086, frameHeight: 1448 };
-      const cols = meta.cols || 4;
-      const frame = player.currentFrame % 8;
-      const col = frame % cols;
-      const row = Math.floor(frame / cols);
+      const sheetW = spriteSheet.naturalWidth || spriteSheet.width || 384;
+      const sheetH = spriteSheet.naturalHeight || spriteSheet.height || 48;
+      const isHighRes = (sheetW >= 4000);
 
-      const srcX = col * meta.frameWidth;
-      const srcY = row * meta.frameHeight;
+      const cols = isHighRes ? 4 : 8;
+      const rows = isHighRes ? 2 : 1;
+      const frameW = Math.round(sheetW / cols);
+      const frameH = Math.round(sheetH / rows);
+
+      const frameIdx = Math.max(0, Math.min(7, player.currentFrame || 0));
+      const col = frameIdx % cols;
+      const row = Math.floor(frameIdx / cols);
+
+      const srcX = col * frameW;
+      const srcY = row * frameH;
 
       // Character ground shadow anchored at feet
       ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
@@ -308,20 +301,20 @@ export class SwingOverlay {
       // Render Large Sophie Sprite with strict bottom-center feet anchor
       ctx.drawImage(
         spriteSheet,
-        srcX, srcY, meta.frameWidth, meta.frameHeight,
+        srcX, srcY, frameW, frameH,
         -renderW / 2, -renderH + 10, renderW, renderH
       );
 
       // Impact Flash on Frame 5/6
-      if (player.animState === 'IMPACT') {
+      if (player.animState === 'IMPACT' || frameIdx === 6) {
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.arc(ballX - playerX, ballY - playerY - 4, 14, 0, Math.PI * 2);
+        ctx.arc(45, -renderH * 0.35, 14, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.fillStyle = '#ffeb3b';
         ctx.beginPath();
-        ctx.arc(ballX - playerX, ballY - playerY - 4, 8, 0, Math.PI * 2);
+        ctx.arc(45, -renderH * 0.35, 8, 0, Math.PI * 2);
         ctx.fill();
       }
     } else {

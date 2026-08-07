@@ -81,11 +81,21 @@ export class Game {
 
       this.swingMeter.onStateChange = (meterState) => {
         this.audioEngine.playMenuBeep();
+        if (meterState === SWING_STATES.POWER_GAUGE) {
+          // CLICK 1: Start backswing (Frame 2)
+          this.player.startBackswing();
+        } else if (meterState === SWING_STATES.SNAP_GAUGE) {
+          // CLICK 2: Lock power & reach top of backswing (Frame 3)
+          this.player.reachTop();
+        } else if (meterState === SWING_STATES.COMPLETE) {
+          // CLICK 3: Lock accuracy & fire downswing (Frame 4 / Impact)
+          this.player.fireDownswing();
+        }
       };
 
       this.swingMeter.onShotTriggered = (shotResult) => {
         this.pendingShot = shotResult;
-        this.player.startSwingAnimation();
+        this.player.fireDownswing();
       };
 
       this.player.onImpactFrame = () => {
@@ -141,11 +151,12 @@ export class Game {
         } else {
           this.hud.showShotPopup('SOLID CONTACT!');
         }
+      };
 
-        setTimeout(() => {
-          this.closeSwingOverlay();
-          this.state = GAME_STATES.BALL_FLIGHT;
-        }, 350);
+      this.player.onSwingComplete = () => {
+        // Immediately hide side-view swing overlay and cut to top-down camera tracking ball flight!
+        this.closeSwingOverlay();
+        this.state = GAME_STATES.BALL_FLIGHT;
       };
 
       this.switchHole(1);
@@ -499,7 +510,7 @@ export class Game {
     if (this.state === GAME_STATES.SWING_STAGE) {
       const spriteSheet = this.assetLoader.getSophieSpriteSheet();
       const spriteMeta = this.assetLoader.getSpriteMetadata();
-      this.swingOverlay.render(this.player, spriteSheet, spriteMeta);
+      this.swingOverlay.render(this.player, spriteSheet, spriteMeta, this.swingMeter);
     }
   }
 

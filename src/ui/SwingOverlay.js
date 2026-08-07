@@ -39,23 +39,187 @@ export class SwingOverlay {
   }
 
   updateMeterUI(meter) {
-    const pos = meter.cursorPos;
-    if (this.meterCursor) {
-      this.meterCursor.style.left = `${pos}%`;
-    }
-
+    if (!this.statusText) return;
     if (meter.state === SWING_STATES.POWER_GAUGE) {
-      if (this.meterFill) this.meterFill.style.width = `${pos}%`;
-      if (this.statusText) this.statusText.innerText = `TAP 2: LOCK POWER (${Math.round(pos)}%)`;
+      this.statusText.innerText = `CLICK 2: LOCK POWER (${Math.round(meter.cursorPos)}%)`;
     } else if (meter.state === SWING_STATES.SNAP_GAUGE) {
-      if (this.statusText) this.statusText.innerText = 'TAP 3: TIME YOUR IMPACT!';
+      this.statusText.innerText = 'CLICK 3: TIME ACCURACY SNAP!';
     } else if (meter.state === SWING_STATES.IDLE) {
-      if (this.meterFill) this.meterFill.style.width = '0%';
-      if (this.statusText) this.statusText.innerText = 'TAP 1: START POWER GAUGE';
+      this.statusText.innerText = 'CLICK 1: START BACKSWING';
+    } else if (meter.state === SWING_STATES.COMPLETE) {
+      this.statusText.innerText = meter.isPerfect ? 'PERFECT SNAP!' : 'SWING EXECUTED!';
     }
   }
 
-  render(player, spriteSheet, spriteMeta) {
+  renderCircularGauge(ctx, meter, w, h) {
+    if (!meter) return;
+
+    const cx = w - 100;
+    const cy = h - 100;
+    const outerR = 64;
+    const innerR = 44;
+    const midR = (outerR + innerR) / 2;
+    const thickness = outerR - innerR;
+
+    // Angle mapping: 0% = Math.PI / 2 (bottom center)
+    // 110% = Math.PI / 2 - 1.5 * Math.PI = -Math.PI (left 9 o'clock)
+    const posToAngle = (pos) => Math.PI / 2 - (pos / 110) * (1.5 * Math.PI);
+
+    ctx.save();
+
+    // 1. Dark Translucent Outer Frame
+    ctx.fillStyle = 'rgba(8, 18, 38, 0.88)';
+    ctx.strokeStyle = '#00e676';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, outerR + 18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Gauge Title Header
+    ctx.font = '700 9px "Press Start 2P", monospace';
+    ctx.fillStyle = '#ffeb3b';
+    ctx.textAlign = 'center';
+    ctx.fillText('3-CLICK GAUGE', cx, cy - outerR - 6);
+
+    // Key Angles
+    const angle0 = posToAngle(0);
+    const angle110 = posToAngle(110);
+    const angle100 = posToAngle(100);
+    const angle96 = posToAngle(96);
+
+    // 2. Track Base Background Arc
+    ctx.beginPath();
+    ctx.arc(cx, cy, midR, angle110, angle0, false);
+    ctx.strokeStyle = 'rgba(25, 45, 75, 0.95)';
+    ctx.lineWidth = thickness;
+    ctx.stroke();
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, outerR, angle110, angle0, false);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx, cy, innerR, angle110, angle0, false);
+    ctx.stroke();
+
+    // 3. Color Zones
+    // a) Power Zone (0% to 96%) - Green Arc
+    ctx.beginPath();
+    ctx.arc(cx, cy, midR, angle0, angle96, true);
+    ctx.strokeStyle = '#00e676';
+    ctx.lineWidth = thickness - 4;
+    ctx.stroke();
+
+    // b) White Target Band at 100% Power (96% to 100%)
+    ctx.beginPath();
+    ctx.arc(cx, cy, midR, angle96, angle100, true);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = thickness;
+    ctx.stroke();
+
+    ctx.strokeStyle = '#ffea00';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, outerR + 2, angle96, angle100, true);
+    ctx.stroke();
+
+    // c) Red Overswing Penalty Zone (100% to 110%)
+    ctx.beginPath();
+    ctx.arc(cx, cy, midR, angle100, angle110, true);
+    ctx.strokeStyle = '#ff1744';
+    ctx.lineWidth = thickness;
+    ctx.stroke();
+
+    // d) White Sweet Spot Target Band at Bottom Center (Accuracy Snap 0%)
+    const snapLeftAng = posToAngle(-3.5);
+    const snapRightAng = posToAngle(3.5);
+    ctx.beginPath();
+    ctx.arc(cx, cy, midR, snapLeftAng, snapRightAng, true);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = thickness + 3;
+    ctx.stroke();
+
+    ctx.strokeStyle = '#00e676';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, outerR + 3, snapLeftAng, snapRightAng, true);
+    ctx.stroke();
+
+    // 4. Zone Labels
+    ctx.font = '8px "Press Start 2P", monospace';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'right';
+    const lx100 = cx + Math.cos(angle100) * (outerR + 12);
+    const ly100 = cy + Math.sin(angle100) * (outerR + 12);
+    ctx.fillText('100%', lx100, ly100);
+
+    ctx.fillStyle = '#ff1744';
+    const lxOver = cx + Math.cos(angle110) * (outerR + 12);
+    const lyOver = cy + Math.sin(angle110) * (outerR + 12);
+    ctx.fillText('MAX', lxOver, lyOver);
+
+    ctx.fillStyle = '#00e676';
+    ctx.textAlign = 'center';
+    ctx.fillText('SNAP', cx, cy + outerR + 12);
+
+    // 5. Locked Power Tick (Click 2)
+    if (meter.lockedPowerPos !== null) {
+      const lockedAngle = posToAngle(meter.lockedPowerPos);
+      ctx.strokeStyle = '#ffea00';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(lockedAngle) * (innerR - 4), cy + Math.sin(lockedAngle) * (innerR - 4));
+      ctx.lineTo(cx + Math.cos(lockedAngle) * (outerR + 4), cy + Math.sin(lockedAngle) * (outerR + 4));
+      ctx.stroke();
+    }
+
+    // 6. Rotating Needle
+    const currentAngle = posToAngle(meter.cursorPos);
+    ctx.save();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3;
+    ctx.shadowColor = '#00e676';
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(currentAngle) * (outerR + 8), cy + Math.sin(currentAngle) * (outerR + 8));
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.fillStyle = '#ffea00';
+    ctx.beginPath();
+    ctx.arc(cx + Math.cos(currentAngle) * (outerR + 8), cy + Math.sin(currentAngle) * (outerR + 8), 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Center Hub
+    ctx.fillStyle = '#0a1628';
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, innerR - 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.font = 'bold 12px "VT323", monospace';
+    ctx.fillStyle = '#00e676';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    if (meter.state === SWING_STATES.POWER_GAUGE) {
+      ctx.fillText(`${Math.round(meter.cursorPos)}%`, cx, cy);
+    } else if (meter.state === SWING_STATES.SNAP_GAUGE) {
+      ctx.fillText('SNAP!', cx, cy);
+    } else if (meter.lockedPowerPos !== null) {
+      ctx.fillText(`${Math.round(meter.lockedPowerPos)}%`, cx, cy);
+    } else {
+      ctx.fillText('READY', cx, cy);
+    }
+
+    ctx.restore();
+  }
+
+  render(player, spriteSheet, spriteMeta, meter) {
     if (!this.isOpen || !this.ctx) return;
 
     const w = this.canvasEl.width || 640;
@@ -163,5 +327,8 @@ export class SwingOverlay {
     }
 
     ctx.restore();
+
+    // 5. Render Circular Arc 3-Click Swing Gauge in Bottom Corner
+    this.renderCircularGauge(ctx, meter, w, h);
   }
 }

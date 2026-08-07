@@ -49,6 +49,7 @@ export class SwingMeter {
     this.cursorPos = 0;
     this.direction = 1;
     this.powerInput = 0;
+    this.lockedPowerPos = null;
     this.isOverswing = false;
     this.overswingPenalty = 0;
     this.snapError = 0;
@@ -63,11 +64,13 @@ export class SwingMeter {
         this.state = SWING_STATES.POWER_GAUGE;
         this.cursorPos = 0;
         this.direction = 1;
+        this.lockedPowerPos = null;
         if (this.onStateChange) this.onStateChange(this.state);
         break;
 
       case SWING_STATES.POWER_GAUGE:
         // CLICK 2: Set power input (Partial < 100%, Controlled = 100%, Overswing > 100%)
+        this.lockedPowerPos = this.cursorPos;
         this.powerInput = Math.min(1.10, Math.max(0.10, this.cursorPos / 100));
 
         if (this.cursorPos > 100) {

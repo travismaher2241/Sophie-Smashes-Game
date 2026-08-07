@@ -516,71 +516,23 @@ html, body {
   image-rendering: crisp-edges;
 }
 
-/* Links LS 98 Swing Gauge inside Modal */
+/* EA / PGA Tour Circular Swing Meter Footer Banner */
 .modal-swing-meter-container {
-  background: #0d111c;
+  background: #090e1a;
   border-top: 2px solid var(--panel-border);
-  padding: 10px 18px;
+  padding: 8px 16px;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.meter-labels {
-  display: flex;
-  justify-content: space-between;
-  font-size: 8px;
-  color: var(--text-muted);
-  font-weight: bold;
-}
-
-.meter-bar-track {
-  width: 100%;
-  height: 22px;
-  background: #101420;
-  border: 2px solid #334060;
-  border-radius: 3px;
-  position: relative;
-  overflow: hidden;
-}
-
-.meter-sweet-spot {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0%;
-  width: 5%;
-  background: var(--snes-green);
-  box-shadow: 0 0 10px var(--snes-green);
-  z-index: 1;
-}
-
-.meter-power-fill {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 0%;
-  background: linear-gradient(90deg, var(--snes-green) 0%, var(--snes-blue) 60%, var(--snes-gold) 85%, var(--snes-red) 100%);
-}
-
-.meter-cursor {
-  position: absolute;
-  top: -2px;
-  bottom: -2px;
-  left: 0%;
-  width: 5px;
-  background: #ffffff;
-  border: 1px solid #000000;
-  box-shadow: 0 0 8px #ffffff;
-  z-index: 3;
-  transform: translateX(-50%);
+  justify-content: center;
+  align-items: center;
 }
 
 .meter-action-hint {
   text-align: center;
-  font-size: 9px;
+  font-size: 10px;
+  font-family: 'Press Start 2P', monospace;
   color: var(--snes-gold);
+  letter-spacing: 0.5px;
+  text-shadow: 1px 1px 0px #000;
 }
 
 .retro-btn {

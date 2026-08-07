@@ -38,11 +38,26 @@ export class PlayerController {
     this.aimAngle = angle;
   }
 
-  startSwingAnimation() {
-    this.isPlayingSwing = true;
+  startBackswing() {
+    this.isPlayingSwing = false;
     this.animState = PLAYER_ANIM_STATES.BACKSWING;
-    this.currentFrame = 0;
+    this.currentFrame = 2; // Frame 2: Backswing
     this.frameTimer = 0;
+  }
+
+  reachTop() {
+    this.isPlayingSwing = false;
+    this.animState = PLAYER_ANIM_STATES.TOP;
+    this.currentFrame = 3; // Frame 3: Top of backswing
+    this.frameTimer = 0;
+  }
+
+  fireDownswing() {
+    this.isPlayingSwing = true;
+    this.animState = PLAYER_ANIM_STATES.DOWNSWING;
+    this.currentFrame = 4; // Frame 4: Downswing transition
+    this.frameTimer = 0;
+    this.impactFired = false;
   }
 
   resetToAddress() {
@@ -50,51 +65,49 @@ export class PlayerController {
     this.animState = PLAYER_ANIM_STATES.ADDRESS;
     this.currentFrame = 0;
     this.frameTimer = 0;
+    this.impactFired = false;
   }
 
   update(dt = 1) {
     if (!this.isPlayingSwing) {
-      // Idle Address wiggle (alternates frames 0 and 1)
-      this.frameTimer += dt;
-      if (this.frameTimer > 40) {
-        this.currentFrame = (this.currentFrame === 0) ? 1 : 0;
-        this.frameTimer = 0;
+      if (this.animState === PLAYER_ANIM_STATES.ADDRESS) {
+        // Idle Address wiggle (alternates frames 0 and 1)
+        this.frameTimer += dt;
+        if (this.frameTimer > 40) {
+          this.currentFrame = (this.currentFrame === 0) ? 1 : 0;
+          this.frameTimer = 0;
+        }
       }
       return;
     }
 
-    // Active Swing Animation Frame Sequencing
+    // Active Downswing -> Impact -> Follow-Through Animation Sequencing
     this.frameTimer += dt;
-    const frameDelay = 6; // Frames per animation tick
+    const frameDelay = 4; // Fast downswing & follow-through tick rate
 
     if (this.frameTimer >= frameDelay) {
       this.frameTimer = 0;
       this.currentFrame++;
 
-      // Frame mapping (8 frames total):
-      // Frame 0 & 1: Address
-      // Frame 2 & 3: Backswing
-      // Frame 4: Top of swing
-      // Frame 5: Downswing
-      // Frame 6: Impact snap!
-      // Frame 7: Follow Through
+      if (this.currentFrame === 4 || this.currentFrame === 5) {
+        this.animState = PLAYER_ANIM_STATES.DOWNSWING;
+      }
 
-      if (this.currentFrame === 2) this.animState = PLAYER_ANIM_STATES.BACKSWING;
-      if (this.currentFrame === 3) this.animState = PLAYER_ANIM_STATES.TOP;
-      if (this.currentFrame === 4) this.animState = PLAYER_ANIM_STATES.DOWNSWING;
-
-      if (this.currentFrame === 5) {
+      if (this.currentFrame === 5 || this.currentFrame === 6) {
         this.animState = PLAYER_ANIM_STATES.IMPACT;
-        if (this.onImpactFrame) {
-          this.onImpactFrame();
+        if (!this.impactFired) {
+          this.impactFired = true;
+          if (this.onImpactFrame) {
+            this.onImpactFrame();
+          }
         }
       }
 
-      if (this.currentFrame === 6 || this.currentFrame === 7) {
+      if (this.currentFrame >= 6) {
         this.animState = PLAYER_ANIM_STATES.FOLLOW_THROUGH;
       }
 
-      if (this.currentFrame >= 8) {
+      if (this.currentFrame >= 7) {
         this.currentFrame = 7; // Hold follow-through pose
         this.isPlayingSwing = false;
         if (this.onSwingComplete) {

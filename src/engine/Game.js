@@ -351,10 +351,11 @@ export class Game {
     this.lastPuttingClickTime = now;
 
     if (this.puttingState === PUTTING_STATES.IDLE) {
-      // CLICK 1: Start power meter oscillation
+      // CLICK 1: Start power meter oscillation & unmount ON THE GREEN banner!
       this.puttingState = PUTTING_STATES.CHARGING;
       this.puttPower = 0.05;
       this.puttPowerDir = 1;
+      if (this.hud) this.hud.hideBanner();
       this.audioEngine.playMenuBeep();
     } else if (this.puttingState === PUTTING_STATES.CHARGING) {
       // CLICK 2: Lock power percentage & pause 0.5s to display locked power bar!

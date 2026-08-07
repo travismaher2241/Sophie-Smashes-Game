@@ -112,12 +112,18 @@ export class BallPhysics {
     // Side-spin curve force (Negative snapError = HOOK left, Positive snapError = SLICE right)
     this.curveSpinForce = (snapError * 0.12);
 
+    this.isPutterShot = club.isPutter;
+
     if (club.isPutter) {
-      // Putting ground roll (Hard capped at 15m max)
+      // Smooth green putter rolling velocity (Target distance = 15m max * power)
       const maxPuttMeters = 15.0;
-      const targetPuttMeters = maxPuttMeters * effectivePower;
+      const targetPuttMeters = maxPuttMeters * Math.min(1.0, Math.max(0.05, effectivePower));
       const targetPixels = targetPuttMeters * pixelsPerMeter;
-      const putterSpeed = (targetPixels / 45);
+
+      // Friction = 0.965 per frame. Total distance = v0 / (1 - 0.965) = v0 / 0.035
+      // Therefore initial velocity v0 = targetPixels * 0.035
+      const putterSpeed = targetPixels * 0.035;
+
       this.vx = Math.cos(totalAngle) * putterSpeed;
       this.vy = Math.sin(totalAngle) * putterSpeed;
       this.vz = 0;
@@ -149,7 +155,7 @@ export class BallPhysics {
   }
 
   update(terrainPixelSampleCallback, wind = { speed: 0, dirAngle: 0 }, audioEngine = null, dt = 1) {
-    if (this.isHoled || (!this.inAir && !this.isRolling && Math.hypot(this.vx, this.vy) < 0.05)) {
+    if (this.isHoled || (!this.inAir && !this.isRolling && Math.hypot(this.vx, this.vy) < 0.03)) {
       this.vx = 0;
       this.vy = 0;
       this.vz = 0;
@@ -250,22 +256,27 @@ export class BallPhysics {
         return;
       }
 
-      // Apply Terrain Surface Friction (Pitch & Chip deaden quickly on fairway/fringe)
-      let baseFriction = this.currentTerrain.friction || 0.85;
-      if (this.currentTerrain.id === 'GREEN') {
-        baseFriction = 0.92;
+      // Smooth green putter rolling friction (0.965 per frame) vs full shot ground roll
+      let rollFriction = 0.93;
+      if (this.isPutterShot) {
+        rollFriction = 0.965;
+      } else if (this.currentTerrain.id === 'GREEN') {
+        rollFriction = 0.92;
       } else if (this.currentShotTypeID === 'PITCH' || this.currentShotTypeID === 'CHIP' || this.currentShotTypeID === 'FLOP') {
-        baseFriction = 0.72; // High friction for short game touch
+        rollFriction = 0.72;
+      } else {
+        const baseFriction = this.currentTerrain.friction || 0.85;
+        rollFriction = Math.min(0.93, baseFriction * (0.65 + this.currentRollMult * 0.30));
       }
 
-      const rollFriction = Math.min(0.93, baseFriction * (0.65 + this.currentRollMult * 0.30));
       this.vx *= Math.pow(rollFriction, dt);
       this.vy *= Math.pow(rollFriction, dt);
 
       this.x += this.vx * dt;
       this.y += this.vy * dt;
 
-      if (Math.hypot(this.vx, this.vy) < 0.08) {
+      const stopThreshold = this.isPutterShot ? 0.02 : 0.08;
+      if (Math.hypot(this.vx, this.vy) < stopThreshold) {
         this.vx = 0;
         this.vy = 0;
         this.isRolling = false;

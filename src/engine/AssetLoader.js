@@ -68,14 +68,14 @@ export class AssetLoader {
     // Exact Bottom Tee-Box & Green Pin Coordinates for all 9 Warragul Country Club Hole Maps
     const warragulHoles = {
       1: { name: 'Warragul Country Club - Hole 1', par: 4, meters: 307, teePos: { x: 543, y: 1994 }, pinPos: { x: 276, y: 274 } },
-      2: { name: 'Warragul Country Club - Hole 2', par: 4, meters: 334, teePos: { x: 457, y: 2019 }, pinPos: { x: 327, y: 274 } },
+      2: { name: 'Warragul Country Club - Hole 2', par: 4, meters: 334, teePos: { x: 460, y: 2065 }, pinPos: { x: 287, y: 250 } },
       3: { name: 'Warragul Country Club - Hole 3', par: 4, meters: 345, teePos: { x: 207, y: 1963 }, pinPos: { x: 605, y: 168 } },
-      4: { name: 'Warragul Country Club - Hole 4', par: 4, meters: 265, teePos: { x: 149, y: 2019 }, pinPos: { x: 368, y: 274 } },
-      5: { name: 'Warragul Country Club - Hole 5', par: 4, meters: 305, teePos: { x: 383, y: 2019 }, pinPos: { x: 366, y: 274 } },
-      6: { name: 'Warragul Country Club - Hole 6', par: 4, meters: 240, teePos: { x: 318, y: 2019 }, pinPos: { x: 351, y: 274 } },
-      7: { name: 'Warragul Country Club - Hole 7', par: 3, meters: 175, teePos: { x: 315, y: 2016 }, pinPos: { x: 369, y: 274 } },
-      8: { name: 'Warragul Country Club - Hole 8', par: 5, meters: 429, teePos: { x: 563, y: 2011 }, pinPos: { x: 327, y: 274 } },
-      9: { name: 'Warragul Country Club - Hole 9', par: 4, meters: 289, teePos: { x: 406, y: 2019 }, pinPos: { x: 329, y: 274 } }
+      4: { name: 'Warragul Country Club - Hole 4', par: 4, meters: 265, teePos: { x: 170, y: 1965 }, pinPos: { x: 545, y: 210 } },
+      5: { name: 'Warragul Country Club - Hole 5', par: 4, meters: 305, teePos: { x: 420, y: 2025 }, pinPos: { x: 350, y: 125 } },
+      6: { name: 'Warragul Country Club - Hole 6', par: 4, meters: 240, teePos: { x: 365, y: 2075 }, pinPos: { x: 370, y: 290 } },
+      7: { name: 'Warragul Country Club - Hole 7', par: 3, meters: 175, teePos: { x: 315, y: 1910 }, pinPos: { x: 525, y: 255 } },
+      8: { name: 'Warragul Country Club - Hole 8', par: 5, meters: 429, teePos: { x: 555, y: 2055 }, pinPos: { x: 200, y: 150 } },
+      9: { name: 'Warragul Country Club - Hole 9', par: 4, meters: 289, teePos: { x: 406, y: 2019 }, pinPos: { x: 200, y: 225 } }
     };
 
     // 2. Load 9 Pre-rendered Hole Maps (724x2172)

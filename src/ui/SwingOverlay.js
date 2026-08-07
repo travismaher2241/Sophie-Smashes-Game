@@ -46,12 +46,12 @@ export class SwingOverlay {
 
     if (meter.state === SWING_STATES.POWER_GAUGE) {
       if (this.meterFill) this.meterFill.style.width = `${pos}%`;
-      if (this.statusText) this.statusText.innerText = `CLICK 2: LOCK POWER (${Math.round(pos)}%)`;
+      if (this.statusText) this.statusText.innerText = `TAP 2: LOCK POWER (${Math.round(pos)}%)`;
     } else if (meter.state === SWING_STATES.SNAP_GAUGE) {
-      if (this.statusText) this.statusText.innerText = 'CLICK 3: SNAP AT 0% BASELINE!';
+      if (this.statusText) this.statusText.innerText = 'TAP 3: TIME YOUR IMPACT!';
     } else if (meter.state === SWING_STATES.IDLE) {
       if (this.meterFill) this.meterFill.style.width = '0%';
-      if (this.statusText) this.statusText.innerText = 'CLICK 1: START POWER GAUGE';
+      if (this.statusText) this.statusText.innerText = 'TAP 1: START POWER GAUGE';
     }
   }
 

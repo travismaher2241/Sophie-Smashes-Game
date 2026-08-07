@@ -50,6 +50,7 @@ export class HUD {
 
     this.shotPopup = document.getElementById('shot-popup');
     this.shotResultText = document.getElementById('shot-result-text');
+    this.smashEffect = document.getElementById('smash-effect');
 
     this.setupEventListeners();
   }
@@ -185,6 +186,19 @@ export class HUD {
     this.shotPopup.classList.remove('hidden');
     setTimeout(() => {
       this.shotPopup.classList.add('hidden');
+    }, duration);
+  }
+
+  showSmashEffect(duration = 1000) {
+    if (!this.smashEffect) return;
+    // Toggling display via the 'hidden' class (rather than just leaving it shown)
+    // is what restarts the CSS animations on repeat perfect shots.
+    this.smashEffect.classList.add('hidden');
+    void this.smashEffect.offsetWidth; // force reflow before re-showing
+    this.smashEffect.classList.remove('hidden');
+    clearTimeout(this.smashEffectTimeout);
+    this.smashEffectTimeout = setTimeout(() => {
+      this.smashEffect.classList.add('hidden');
     }, duration);
   }
 }

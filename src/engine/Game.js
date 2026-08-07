@@ -131,15 +131,15 @@ export class Game {
         this.sceneManager.recordStroke();
 
         if (shot.isPerfect) {
-          this.hud.showShotPopup('PERFECT SNAP!!');
+          this.hud.showSmashEffect();
         } else if (shot.snapError < -0.2) {
-          this.hud.showShotPopup('HOOK SHOT!');
+          this.hud.showShotPopup('HOOK!');
         } else if (shot.snapError > 0.2) {
-          this.hud.showShotPopup('SLICE SHOT!');
+          this.hud.showShotPopup('SLICE!');
         } else if (shot.isOverswing) {
-          this.hud.showShotPopup('OVERSWING HIT!');
+          this.hud.showShotPopup('OVERSWING!');
         } else {
-          this.hud.showShotPopup('GOOD HIT!');
+          this.hud.showShotPopup('SOLID CONTACT!');
         }
 
         setTimeout(() => {
